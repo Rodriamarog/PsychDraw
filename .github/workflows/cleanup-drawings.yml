@@ -1,0 +1,21 @@
+name: Hourly Drawing Cleanup
+
+on:
+  schedule:
+    # Run every hour
+    - cron: '0 * * * *'
+  
+  # Allow manual triggering for testing
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Cleanup Function
+        run: |
+          curl -X POST 'https://qwikeaqmeybiufnsbiyl.supabase.co/functions/v1/cleanup-drawings' \
+          -H 'Authorization: Bearer ${{ secrets.SUPABASE_SERVICE_KEY }}' \
+          -H 'Content-Type: application/json'
+      - name: Log completion time
+        run: echo "Cleanup function triggered at $(date)"
