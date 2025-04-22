@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { supabase } from '@/lib/supabaseClient';
@@ -85,6 +85,7 @@ const ClientDetailSkeleton = () => (
 
 export function ClientDetail() {
   const { clientId } = useParams<{ clientId: string }>();
+  const navigate = useNavigate(); // Initialize useNavigate
   
   // Use generated types for state
   const [client, setClient] = useState<ClientDetails | null>(null);
@@ -204,20 +205,38 @@ export function ClientDetail() {
     setStartAnalysisError(null);
   }
 
-  // --- TODO: handleStartAnalysis function --- 
-  const handleStartAnalysis = async () => {
-    if (!selectedDrawingTypeId /* || !drawingImageFile */) { // Add image check later
-        setStartAnalysisError("Please select a drawing type and provide an image.");
-        return;
+  // --- Modified handleStartAnalysis function --- 
+  const handleStartAnalysis = () => {
+    // No longer async, just navigates
+    if (!selectedDrawingTypeId) {
+      // This error should ideally not happen if button is disabled, but good practice
+      setStartAnalysisError("Please select a drawing type."); 
+      return;
     }
-    // ... implementation for uploading image and creating analysis record ...
-    console.log("Starting analysis with type:", selectedDrawingTypeId);
-    setIsStartingAnalysis(true);
+    if (!clientId) {
+      // Should also not happen due to page structure
+      setStartAnalysisError("Client ID is missing.");
+      return;
+    }
+
+    // Clear any previous errors and close the modal immediately
     setStartAnalysisError(null);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500)); 
-    setIsStartingAnalysis(false);
-    // handleModalClose(); // Close modal on success
+    handleModalClose(); 
+
+    // Navigate to the new capture route
+    // Use requestAnimationFrame to ensure navigation happens after modal closes smoothly
+    requestAnimationFrame(() => {
+        navigate(`/client/${clientId}/capture/${selectedDrawingTypeId}`);
+    });
+
+    // Remove old logic:
+    // console.log("Starting analysis with type:", selectedDrawingTypeId);
+    // setIsStartingAnalysis(true);
+    // setStartAnalysisError(null);
+    // // Simulate API call
+    // await new Promise(resolve => setTimeout(resolve, 1500)); 
+    // setIsStartingAnalysis(false);
+    // handleModalClose(); 
   };
 
   // --- Render Logic --- 

@@ -18,6 +18,10 @@ import {
 const ClientDetail = lazy(() => 
   import('@/components/ClientDetail').then(module => ({ default: module.ClientDetail }))
 );
+// Corrected lazy load for CaptureDrawing (named export)
+const CaptureDrawing = lazy(() => 
+  import('@/components/CaptureDrawing').then(module => ({ default: module.CaptureDrawing }))
+);
 // import { ClientDetail } from "@/components/ClientDetail"; // We'll create this next
 
 // Simple fallback component for Suspense
@@ -132,6 +136,20 @@ function App() {
                           transition={pageTransition}
                         >
                           <ClientDetail />
+                        </motion.div>
+                      } 
+                    />
+                    <Route 
+                      path="/client/:clientId/capture/:drawingTypeId" 
+                      element={
+                        <motion.div 
+                          initial="initial"
+                          animate="in"
+                          exit="out"
+                          variants={pageVariants}
+                          transition={pageTransition}
+                        >
+                          <CaptureDrawing />
                         </motion.div>
                       } 
                     />
