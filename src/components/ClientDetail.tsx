@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { supabase } from '@/lib/supabaseClient';
-import { ArrowLeft, FilePlus2 } from 'lucide-react'; // Icons
+import { ArrowLeft, FilePlus2, FileText, Home, TreeDeciduous, User, Users } from 'lucide-react'; // Icons
 import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
 import { 
   Dialog, 
@@ -16,15 +16,6 @@ import {
   DialogClose 
 } from "@/components/ui/dialog"; // Already have Dialog
 import { Label } from "@/components/ui/label"; // Import Label
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue, 
-  SelectGroup,
-  SelectLabel
-} from "@/components/ui/select"; // Import Select components
 // Import generated types
 import type { Database } from '@/lib/database.types';
 
@@ -37,6 +28,24 @@ type AnalysisQueryResult = (Database['public']['Tables']['drawing_analyses']['Ro
 
 // Use generated types for drawing types
 type DrawingType = Database['public']['Tables']['drawing_types']['Row'];
+
+// Helper function to get an icon based on drawing type name
+const getDrawingTypeIcon = (typeName: string): React.ElementType => {
+  const lowerCaseName = typeName.toLowerCase();
+  if (lowerCaseName.includes('house') && lowerCaseName.includes('tree') && lowerCaseName.includes('person')) {
+    return Home; // Or a combination? For now, just Home for HTP
+  } else if (lowerCaseName.includes('person')) {
+    return User;
+  } else if (lowerCaseName.includes('family')) {
+    return Users;
+  } else if (lowerCaseName.includes('tree')) {
+    return TreeDeciduous;
+  } else if (lowerCaseName.includes('house')) {
+    return Home;
+  } 
+  // Default icon if no match
+  return FileText; 
+};
 
 // Skeleton for Client Detail Page
 const ClientDetailSkeleton = () => (
@@ -252,61 +261,82 @@ export function ClientDetail() {
                         Start New Analysis
                     </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[480px]">
+                <DialogContent className="sm:max-w-[525px]"> {/* Adjust width if needed */}
                     <DialogHeader>
-                        <DialogTitle>Start New Analysis for {client?.name}</DialogTitle>
+                        <DialogTitle>Start New Analysis for {client.name}</DialogTitle>
                         <DialogDescription>
-                           Select the drawing type and provide the client's drawing.
+                            Select the drawing type and provide the client's drawing. 
                         </DialogDescription>
                     </DialogHeader>
-                    
-                    {/* == New Analysis Form == */}
+                    {/* Form content */}
                     <div className="grid gap-4 py-4">
-                        {/* Drawing Type Select */}
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="drawing-type" className="text-right">
-                                Drawing Type
-                            </Label>
-                            <Select 
-                                value={selectedDrawingTypeId}
-                                onValueChange={setSelectedDrawingTypeId} // Update state on change
-                                disabled={isStartingAnalysis}
-                            >
-                                <SelectTrigger className="col-span-3" id="drawing-type">
-                                    <SelectValue placeholder="Select a drawing type..." />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectGroup>
-                                        <SelectLabel>Psychological Tests</SelectLabel>
-                                        {drawingTypes.map((type) => (
-                                            <SelectItem key={type.id} value={type.id}>
-                                                {type.name}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectGroup>
-                                </SelectContent>
-                            </Select>
+                        {/* Drawing Type Selection using Cards */}
+                        <div className="grid gap-2">
+                            <Label htmlFor="drawing-type-selection">Drawing Type</Label>
+                            {loadingTypes ? (
+                                // Skeleton loader for cards
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3" id="drawing-type-selection">
+                                    {[1, 2, 3].map((i) => (
+                                        <Card key={i} className="flex flex-col items-center justify-center p-4 h-28">
+                                            <Skeleton className="h-8 w-8 mb-2 rounded-md" />
+                                            <Skeleton className="h-4 w-16" />
+                                        </Card>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3" id="drawing-type-selection">
+                                    {drawingTypes.map((type) => (
+                                        <Card 
+                                            key={type.id} 
+                                            className={`flex flex-col items-center justify-center p-4 cursor-pointer transition-colors duration-150 h-28 ${ // Base styling
+                                                selectedDrawingTypeId === type.id 
+                                                    ? 'border-primary ring-2 ring-primary bg-muted' // Selected style
+                                                    : 'border-border hover:bg-muted/50' // Default style
+                                            }`}
+                                            onClick={() => setSelectedDrawingTypeId(type.id)}
+                                        >
+                                            {/* Use dynamic icon based on type name */}
+                                            {React.createElement(getDrawingTypeIcon(type.name), {
+                                                className: "h-8 w-8 mb-2 text-muted-foreground",
+                                            })}
+                                            <span className="text-sm text-center font-medium">{type.name}</span>
+                                        </Card>
+                                    ))}
+                                </div>
+                            )}
                         </div>
-                        
-                        {/* TODO: Add Analysis Title Input */}
 
-                        {/* TODO: Add Image Input (Upload/Camera) */}
-
-                        {startAnalysisError && <p className="col-span-4 text-sm text-red-600 text-center -mt-2">{startAnalysisError}</p>} 
+                        {/* TODO: Add inputs for Analysis Title and Image Upload */}
+                        {/* Example placeholders: */}
+                        {/* 
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="analysis-title" className="text-right">
+                                Title (Optional)
+                            </Label>
+                            <Input id="analysis-title" value={analysisTitle} onChange={(e) => setAnalysisTitle(e.target.value)} className="col-span-3" />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="drawing-image" className="text-right">
+                                Drawing
+                            </Label>
+                            <Input id="drawing-image" type="file" accept="image/*" onChange={(e) => setDrawingImageFile(e.target.files ? e.target.files[0] : null)} className="col-span-3" />
+                        </div> 
+                        */}
+                         {/* Display submission error */}
+                        {startAnalysisError && (
+                            <p className="text-sm text-destructive text-center col-span-full">{startAnalysisError}</p>
+                        )}
                     </div>
-                    {/* == End Form == */}
-                    
                     <DialogFooter>
                         <DialogClose asChild>
-                            <Button type="button" variant="outline" disabled={isStartingAnalysis}>Cancel</Button>
+                             <Button variant="outline">Cancel</Button>
                         </DialogClose>
                         <Button 
-                            type="button" // Changed from submit for now
+                            type="button" // Changed from submit as it's not a form yet
                             onClick={handleStartAnalysis} 
-                            // Enable only when type selected (add image check later)
-                            disabled={!selectedDrawingTypeId || isStartingAnalysis}
+                            disabled={!selectedDrawingTypeId || isStartingAnalysis /* || !drawingImageFile */}
                         >
-                            {isStartingAnalysis ? "Processing..." : "Start Analysis"}
+                            {isStartingAnalysis ? 'Starting...' : 'Start Analysis'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>
