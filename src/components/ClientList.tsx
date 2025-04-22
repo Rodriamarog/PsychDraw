@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Plus, ChevronRight } from 'lucide-react';
 
 // Define a type for the client data we expect
 type Client = {
@@ -149,49 +150,6 @@ export function ClientList() {
     <div className="w-full max-w-lg mx-auto p-4">
       <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-semibold">Your Clients</h2>
-          
-          {/* Add Client Dialog Trigger Button */}
-          <Dialog open={isDialogOpen} onOpenChange={handleDialogChange}>
-              <DialogTrigger asChild>
-                  <Button>Add New Client</Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                  <DialogHeader>
-                      <DialogTitle>Add New Client</DialogTitle>
-                      <DialogDescription>
-                          Enter the name for your new client.
-                      </DialogDescription>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                      <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="name" className="text-right">
-                              Name
-                          </Label>
-                          <Input 
-                              id="name" 
-                              value={newClientName} 
-                              onChange={(e) => setNewClientName(e.target.value)}
-                              className="col-span-3" 
-                              placeholder="Client's full name"
-                              disabled={isSaving}
-                          />
-                      </div>
-                      {saveError && <p className="col-span-4 text-sm text-red-600 text-center">{saveError}</p>} 
-                  </div>
-                  <DialogFooter>
-                      <DialogClose asChild>
-                          <Button type="button" variant="outline" disabled={isSaving}>Cancel</Button>
-                      </DialogClose>
-                      <Button 
-                          type="button" // Use type=button to prevent form submission if wrapped in <form> later
-                          onClick={handleSaveClient} 
-                          disabled={isSaving || !newClientName.trim()}
-                      >
-                          {isSaving ? "Saving..." : "Save Client"}
-                      </Button>
-                  </DialogFooter>
-              </DialogContent>
-          </Dialog>
       </div>
 
       {/* Client List Display */}
@@ -205,14 +163,61 @@ export function ClientList() {
             <li key={client.id}>
               <Link 
                 to={`/client/${client.id}`} 
-                className="block p-4 bg-card text-card-foreground border rounded-lg shadow-sm cursor-pointer transition-colors hover:bg-muted/50"
+                className="flex justify-between items-center p-4 bg-card text-card-foreground border rounded-lg shadow-sm cursor-pointer transition-colors hover:bg-muted/50"
               >
-                {client.name}
+                <span>{client.name}</span>
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </Link>
             </li>
           ))}
         </ul>
       )}
+
+      {/* Add Client Dialog and Trigger Button */}
+      <Dialog open={isDialogOpen} onOpenChange={handleDialogChange}>
+          <DialogTrigger asChild>
+              <Button variant="outline" className="w-full mt-6">
+                  <Plus className="mr-2 h-4 w-4" /> Add New Client
+              </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                  <DialogTitle>Add New Client</DialogTitle>
+                  <DialogDescription>
+                      Enter the name for your new client.
+                  </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="name" className="text-right">
+                          Name
+                      </Label>
+                      <Input 
+                          id="name" 
+                          value={newClientName} 
+                          onChange={(e) => setNewClientName(e.target.value)}
+                          className="col-span-3" 
+                          placeholder="Client's full name"
+                          disabled={isSaving}
+                      />
+                  </div>
+                  {saveError && <p className="col-span-4 text-sm text-red-600 text-center">{saveError}</p>} 
+              </div>
+              <DialogFooter>
+                  <DialogClose asChild>
+                      <Button type="button" variant="outline" disabled={isSaving}>Cancel</Button>
+                  </DialogClose>
+                  <Button 
+                      type="button" // Use type=button to prevent form submission if wrapped in <form> later
+                      onClick={handleSaveClient} 
+                      disabled={isSaving || !newClientName.trim()}
+                  >
+                      {isSaving ? "Saving..." : "Save Client"}
+                  </Button>
+              </DialogFooter>
+          </DialogContent>
+      </Dialog>
+
     </div>
   );
 }

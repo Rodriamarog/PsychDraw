@@ -32,19 +32,25 @@ type DrawingType = Database['public']['Tables']['drawing_types']['Row'];
 // Helper function to get an icon based on drawing type name
 const getDrawingTypeIcon = (typeName: string): React.ElementType => {
   const lowerCaseName = typeName.toLowerCase();
+  let IconComponent: React.ElementType = FileText; // Default icon
+
   if (lowerCaseName.includes('house') && lowerCaseName.includes('tree') && lowerCaseName.includes('person')) {
-    return Home; // Or a combination? For now, just Home for HTP
-  } else if (lowerCaseName.includes('person')) {
-    return User;
+    IconComponent = Home;
+  } else if (lowerCaseName.includes('kinetic') && lowerCaseName.includes('family')) {
+    IconComponent = Users; // Use Users for KFD
   } else if (lowerCaseName.includes('family')) {
-    return Users;
+    IconComponent = Users;
+  } else if (lowerCaseName.includes('person')) {
+    // Catch DAP and Person Under Rain
+    IconComponent = User;
   } else if (lowerCaseName.includes('tree')) {
-    return TreeDeciduous;
+    IconComponent = TreeDeciduous;
   } else if (lowerCaseName.includes('house')) {
-    return Home;
-  } 
-  // Default icon if no match
-  return FileText; 
+    IconComponent = Home;
+  } else {
+  }
+  
+  return IconComponent; 
 };
 
 // Skeleton for Client Detail Page
@@ -285,23 +291,35 @@ export function ClientDetail() {
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3" id="drawing-type-selection">
-                                    {drawingTypes.map((type) => (
-                                        <Card 
-                                            key={type.id} 
-                                            className={`flex flex-col items-center justify-center p-4 cursor-pointer transition-colors duration-150 h-28 ${ // Base styling
-                                                selectedDrawingTypeId === type.id 
-                                                    ? 'border-primary ring-2 ring-primary bg-muted' // Selected style
-                                                    : 'border-border hover:bg-muted/50' // Default style
-                                            }`}
-                                            onClick={() => setSelectedDrawingTypeId(type.id)}
-                                        >
-                                            {/* Use dynamic icon based on type name */}
-                                            {React.createElement(getDrawingTypeIcon(type.name), {
-                                                className: "h-8 w-8 mb-2 text-muted-foreground",
-                                            })}
-                                            <span className="text-sm text-center font-medium">{type.name}</span>
-                                        </Card>
-                                    ))}
+                                    {drawingTypes.map((type) => {
+                                        // Get the specific Icon component based on the type name
+                                        const IconComponent = getDrawingTypeIcon(type.name);
+                                        // Return the Card JSX directly
+                                        return (
+                                            <Card 
+                                                key={type.id} 
+                                                className={`flex flex-col items-center justify-center px-4 cursor-pointer transition-colors duration-150 h-28 ${ // Use justify-center, remove vertical padding
+                                                    selectedDrawingTypeId === type.id 
+                                                        ? 'border-primary ring-2 ring-primary bg-muted' // Selected style
+                                                        : 'border-border hover:bg-muted/50' // Default style
+                                                }`}
+                                                onClick={() => setSelectedDrawingTypeId(type.id)}
+                                            >
+                                                {/* Icon wrapper pushed down slightly */}
+                                                <div 
+                                                    className="mt-1" // Small margin-top to push icon down
+                                                    style={{ width: '32px', height: '32px' }} // Apply fixed size to wrapper
+                                                >
+                                                    <IconComponent 
+                                                        className="text-muted-foreground" // Apply color
+                                                        style={{ width: '100%', height: '100%' }} // Icon fills the wrapper
+                                                    />
+                                                </div>
+                                                {/* Text pulled up slightly, made smaller */}
+                                                <span className="text-xs text-center font-medium -mt-1">{type.name}</span>
+                                            </Card>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
