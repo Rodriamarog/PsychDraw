@@ -3,19 +3,11 @@ import { useParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { supabase } from '@/lib/supabaseClient';
-import { ArrowLeft, FilePlus2, FileText, Home, TreeDeciduous, User, Users } from 'lucide-react'; // Icons
+import { ArrowLeft, FilePlus2, FileText, Home, TreeDeciduous, User, Users, ChevronRight, XIcon } from 'lucide-react'; // Icons
 import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogTrigger,
-  DialogClose 
-} from "@/components/ui/dialog"; // Already have Dialog
 import { Label } from "@/components/ui/label"; // Import Label
+// Import motion and AnimatePresence
+import { motion, AnimatePresence } from 'framer-motion'; 
 // Import generated types
 import type { Database } from '@/lib/database.types';
 
@@ -31,23 +23,31 @@ type DrawingType = Database['public']['Tables']['drawing_types']['Row'];
 
 // Helper function to get an icon based on drawing type name
 const getDrawingTypeIcon = (typeName: string): React.ElementType => {
+  // console.log("Mapping icon for type name:", typeName);
   const lowerCaseName = typeName.toLowerCase();
   let IconComponent: React.ElementType = FileText; // Default icon
 
   if (lowerCaseName.includes('house') && lowerCaseName.includes('tree') && lowerCaseName.includes('person')) {
-    IconComponent = Home;
+    IconComponent = Home; 
+    // console.log("-> Matched HTP (Home)");
   } else if (lowerCaseName.includes('kinetic') && lowerCaseName.includes('family')) {
     IconComponent = Users; // Use Users for KFD
+    // console.log("-> Matched KFD (Users)");
   } else if (lowerCaseName.includes('family')) {
     IconComponent = Users;
+    // console.log("-> Matched Family (Users)");
   } else if (lowerCaseName.includes('person')) {
     // Catch DAP and Person Under Rain
     IconComponent = User;
+    // console.log("-> Matched Person (User)");
   } else if (lowerCaseName.includes('tree')) {
     IconComponent = TreeDeciduous;
+    // console.log("-> Matched Tree (TreeDeciduous)");
   } else if (lowerCaseName.includes('house')) {
     IconComponent = Home;
+    // console.log("-> Matched House (Home)");
   } else {
+    // console.log("-> No specific match, using default (FileText)");
   }
   
   return IconComponent; 
@@ -195,14 +195,13 @@ export function ClientDetail() {
   }, [clientId]);
 
   // --- Dialog form state reset --- 
-  const handleDialogChange = (open: boolean) => {
-    setIsAnalysisDialogOpen(open);
-    if (!open) {
-        setSelectedDrawingTypeId("");
-        setAnalysisTitle("");
-        setDrawingImageFile(null);
-        setStartAnalysisError(null);
-    }
+  const handleModalClose = () => {
+    setIsAnalysisDialogOpen(false);
+    // Reset form state if needed when modal closes
+    setSelectedDrawingTypeId("");
+    setAnalysisTitle("");
+    setDrawingImageFile(null);
+    setStartAnalysisError(null);
   }
 
   // --- TODO: handleStartAnalysis function --- 
@@ -218,7 +217,7 @@ export function ClientDetail() {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1500)); 
     setIsStartingAnalysis(false);
-    // handleDialogChange(false); // Close dialog on success
+    // handleModalClose(); // Close modal on success
   };
 
   // --- Render Logic --- 
@@ -259,111 +258,121 @@ export function ClientDetail() {
         <div className="flex items-center gap-2 justify-end">
             {/* TODO: Add Edit Client Button/Functionality */}
             <Button variant="outline" size="sm">Edit Client</Button>
-            <Dialog open={isAnalysisDialogOpen} onOpenChange={handleDialogChange}>
-                <DialogTrigger asChild>
-                    {/* Disable button if drawing types haven't loaded */}
-                    <Button size="sm" disabled={loadingTypes || !!error}> 
-                        <FilePlus2 className="mr-2 h-4 w-4" />
-                        Start New Analysis
-                    </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[525px]"> {/* Adjust width if needed */}
-                    <DialogHeader>
-                        <DialogTitle>Start New Analysis for {client.name}</DialogTitle>
-                        <DialogDescription>
-                            Select the drawing type and provide the client's drawing. 
-                        </DialogDescription>
-                    </DialogHeader>
-                    {/* Form content */}
-                    <div className="grid gap-4 py-4">
-                        {/* Drawing Type Selection using Cards */}
-                        <div className="grid gap-2">
-                            <Label htmlFor="drawing-type-selection">Drawing Type</Label>
-                            {loadingTypes ? (
-                                // Skeleton loader for cards
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3" id="drawing-type-selection">
-                                    {[1, 2, 3].map((i) => (
-                                        <Card key={i} className="flex flex-col items-center justify-center p-4 h-28">
-                                            <Skeleton className="h-8 w-8 mb-2 rounded-md" />
-                                            <Skeleton className="h-4 w-16" />
-                                        </Card>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3" id="drawing-type-selection">
-                                    {drawingTypes.map((type) => {
-                                        // Get the specific Icon component based on the type name
-                                        const IconComponent = getDrawingTypeIcon(type.name);
-                                        // Return the Card JSX directly
-                                        return (
-                                            <Card 
-                                                key={type.id} 
-                                                className={`flex flex-col items-center justify-center px-4 cursor-pointer transition-colors duration-150 h-28 ${ // Use justify-center, remove vertical padding
-                                                    selectedDrawingTypeId === type.id 
-                                                        ? 'border-primary ring-2 ring-primary bg-muted' // Selected style
-                                                        : 'border-border hover:bg-muted/50' // Default style
-                                                }`}
-                                                onClick={() => setSelectedDrawingTypeId(type.id)}
-                                            >
-                                                {/* Icon wrapper pushed down slightly */}
-                                                <div 
-                                                    className="mt-1" // Small margin-top to push icon down
-                                                    style={{ width: '32px', height: '32px' }} // Apply fixed size to wrapper
-                                                >
-                                                    <IconComponent 
-                                                        className="text-muted-foreground" // Apply color
-                                                        style={{ width: '100%', height: '100%' }} // Icon fills the wrapper
-                                                    />
-                                                </div>
-                                                {/* Text pulled up slightly, made smaller */}
-                                                <span className="text-xs text-center font-medium -mt-1">{type.name}</span>
-                                            </Card>
-                                        );
-                                    })}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* TODO: Add inputs for Analysis Title and Image Upload */}
-                        {/* Example placeholders: */}
-                        {/* 
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="analysis-title" className="text-right">
-                                Title (Optional)
-                            </Label>
-                            <Input id="analysis-title" value={analysisTitle} onChange={(e) => setAnalysisTitle(e.target.value)} className="col-span-3" />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="drawing-image" className="text-right">
-                                Drawing
-                            </Label>
-                            <Input id="drawing-image" type="file" accept="image/*" onChange={(e) => setDrawingImageFile(e.target.files ? e.target.files[0] : null)} className="col-span-3" />
-                        </div> 
-                        */}
-                         {/* Display submission error */}
-                        {startAnalysisError && (
-                            <p className="text-sm text-destructive text-center col-span-full">{startAnalysisError}</p>
-                        )}
-                    </div>
-                    <DialogFooter>
-                        <DialogClose asChild>
-                             <Button variant="outline">Cancel</Button>
-                        </DialogClose>
-                        <Button 
-                            type="button" // Changed from submit as it's not a form yet
-                            onClick={handleStartAnalysis} 
-                            disabled={!selectedDrawingTypeId || isStartingAnalysis /* || !drawingImageFile */}
-                        >
-                            {isStartingAnalysis ? 'Starting...' : 'Start Analysis'}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            
+            {/* Changed to standard button to open manual modal */}
+            <Button 
+                size="sm" 
+                disabled={loadingTypes || !!error} 
+                onClick={() => setIsAnalysisDialogOpen(true)} // Open modal on click
+            >
+                <FilePlus2 className="mr-2 h-4 w-4" />
+                Start New Analysis
+            </Button>
         </div>
       </div>
 
-      {/* TODO: Maybe add a Client Details Card here if more info is needed */}
-      {/* <Card> ... </Card> */}
+      {/* Manual Modal Implementation */}
+      <AnimatePresence>
+          {isAnalysisDialogOpen && (
+              <> {/* Fragment to hold overlay and modal content */} 
+                  {/* Overlay */}
+                  <motion.div
+                      key="analysis-modal-overlay"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="fixed inset-0 bg-black/50 z-40" // Ensure z-index is below content
+                      onClick={handleModalClose} // Close on overlay click
+                  />
+
+                  {/* Modal Content Wrapper (Handles animation and positioning) */}
+                  <motion.div
+                      key="analysis-modal-content"
+                      initial={{ opacity: 0, scale: 0.95 }} // Start slightly smaller and faded
+                      animate={{ opacity: 1, scale: 1 }}    // Animate to full size and opacity
+                      exit={{ opacity: 0, scale: 0.95 }}      // Exit animation
+                      transition={{ duration: 0.2, ease: "easeInOut" }}
+                      className="fixed top-1/2 left-1/2 z-50 w-full max-w-[calc(100%-2rem)] sm:max-w-[525px] -translate-x-1/2 -translate-y-1/2" 
+                  >
+                      <Card className="relative p-6"> {/* Use Card for background/padding, add relative for close button */}
+                          {/* Manual Close Button */}
+                          <button
+                              onClick={handleModalClose}
+                              className="absolute top-3 right-3 p-1 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                              aria-label="Close dialog"
+                          >
+                              <XIcon className="h-5 w-5" />
+                          </button>
+
+                          {/* Moved Header Content Here */}
+                          <div className="mb-4"> {/* Equivalent of DialogHeader padding */} 
+                              <h2 className="text-lg font-semibold">Start New Analysis for {client?.name}</h2>
+                              <p className="text-sm text-muted-foreground">
+                                  Select the drawing type and provide the client's drawing. 
+                              </p>
+                          </div>
+
+                          {/* Form content (Grid with cards) - Copied from original DialogContent */}
+                          <div className="grid gap-4 py-4">
+                              {/* Drawing Type Selection using Cards */}
+                              <div className="grid gap-2">
+                                  <Label htmlFor="drawing-type-selection">Drawing Type</Label>
+                                  {loadingTypes ? (
+                                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3" id="drawing-type-selection">
+                                          {[1, 2, 3].map((i) => (
+                                              <Card key={i} className="flex flex-col items-center justify-center p-4 h-28">
+                                                  <Skeleton className="h-8 w-8 mb-2 rounded-md" />
+                                                  <Skeleton className="h-4 w-16" />
+                                              </Card>
+                                          ))}
+                                      </div>
+                                  ) : (
+                                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3" id="drawing-type-selection">
+                                          {drawingTypes.map((type) => {
+                                              const IconComponent = getDrawingTypeIcon(type.name);
+                                              return (
+                                                  <Card 
+                                                      key={type.id} 
+                                                      className={`flex flex-col items-center justify-center px-4 cursor-pointer transition-colors duration-150 h-28 ${ 
+                                                          selectedDrawingTypeId === type.id 
+                                                              ? 'border-primary ring-2 ring-primary bg-muted' 
+                                                              : 'border-border hover:bg-muted/50' 
+                                                      }`}
+                                                      onClick={() => setSelectedDrawingTypeId(type.id)}
+                                                  >
+                                                      <div className="mt-1" style={{ width: '32px', height: '32px' }}>
+                                                          <IconComponent className="text-muted-foreground" style={{ width: '100%', height: '100%' }} />
+                                                      </div>
+                                                      <span className="text-xs text-center font-medium -mt-1">{type.name}</span>
+                                                  </Card>
+                                              );
+                                          })}
+                                      </div>
+                                  )}
+                              </div>
+                              {/* TODO: Add inputs for Analysis Title and Image Upload */} 
+                              {startAnalysisError && (
+                                  <p className="text-sm text-destructive text-center col-span-full">{startAnalysisError}</p>
+                              )}
+                          </div>
+
+                          {/* Moved Footer Content Here */}
+                          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end mt-4"> {/* Equivalent of DialogFooter */} 
+                              <Button variant="outline" onClick={handleModalClose}>Cancel</Button>
+                              <Button 
+                                  type="button"
+                                  onClick={handleStartAnalysis} 
+                                  disabled={!selectedDrawingTypeId || isStartingAnalysis}
+                              >
+                                  {isStartingAnalysis ? 'Starting...' : 'Start Analysis'}
+                              </Button>
+                          </div>
+                      </Card>
+                  </motion.div>
+              </>
+          )}
+      </AnimatePresence>
 
       {/* Analysis History Section */}
       <Card>
@@ -380,7 +389,7 @@ export function ClientDetail() {
           ) : analyses.length === 0 ? (
             <div className="text-center py-6 text-muted-foreground border border-dashed rounded-md">
               <p>No analyses found for this client yet.</p>
-              {/* Optional: Add a subtle 'Start New Analysis' button here too? */}
+              {/* Optional: Add a subtle 'Start New Analysis' button here too? */} 
             </div>
           ) : (
             <ul className="space-y-3">
