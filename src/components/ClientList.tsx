@@ -16,7 +16,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, ChevronRight } from 'lucide-react';
+import { Plus, ChevronRight, User, X } from 'lucide-react';
+import { Badge } from "@/components/ui/badge";
+import { Search } from 'lucide-react';
+import { Card } from "@/components/ui/card";
 
 // Define a type for the client data we expect
 type Client = {
@@ -146,38 +149,94 @@ export function ClientList() {
     return <div className="text-center p-4 text-red-600">Error: {error}</div>;
   }
   
+  // Render Search Input (Functionality not implemented yet)
+  const renderSearchBar = () => (
+    <div className="relative w-full mb-4"> {/* Add margin-bottom */}
+      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+      <Input
+        type="search" // Use type search for potential browser features
+        placeholder="Search clients..." 
+        className="pl-8 w-full" // Add padding for the icon
+        // Add onChange handler later for functionality
+      />
+    </div>
+  );
+  
   return (
-    <div className="w-full max-w-lg mx-auto p-4">
-      <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-semibold">Your Clients</h2>
+    // Use flex column layout for the whole component
+    <div className="flex flex-col h-full max-w-lg mx-auto p-4"> 
+      {/* Header: Title and Badge */}
+      <div className="flex justify-between items-center mb-4"> {/* Reduced margin-bottom */}
+          <h2 className="text-2xl font-bold">Your Clients</h2> {/* Use font-bold */}
+          {/* Show badge only if not loading and there are clients */} 
+          {!loading && clients.length > 0 && (
+            <Badge variant="secondary">{clients.length} Total</Badge>
+          )}
       </div>
 
-      {/* Client List Display */}
-      {clients.length === 0 ? (
-        <div className="text-center p-4 border border-dashed rounded-md">
-          You haven't added any clients yet.
-        </div>
-      ) : (
-        <ul className="space-y-3">
-          {clients.map((client) => (
-            <li key={client.id}>
-              <Link 
-                to={`/client/${client.id}`} 
-                className="flex justify-between items-center p-4 bg-card text-card-foreground border rounded-lg shadow-sm cursor-pointer transition-colors hover:bg-muted/50"
-              >
-                <span>{client.name}</span>
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
+      {/* Search Bar */}
+      {renderSearchBar()}
 
-      {/* Add Client Dialog and Trigger Button */}
-      <Dialog open={isDialogOpen} onOpenChange={handleDialogChange}>
+      {/* Client List Area - Use flex-grow to push button down */}
+      <div className="flex-grow space-y-3 overflow-y-auto"> {/* Added overflow-y-auto if needed */} 
+        {clients.length === 0 ? (
+          <div className="text-center p-4 border border-dashed rounded-md mt-4"> {/* Added mt-4 */} 
+            You haven't added any clients yet.
+          </div>
+        ) : (
+          <div className="space-y-3"> {/* Use a div with space-y */} 
+            {clients.map((client) => (
+              // Use Card for each item
+              <Card key={client.id} className="overflow-hidden"> {/* Added overflow-hidden for potential rounded corners on link */} 
+                <Link 
+                  to={`/client/${client.id}`} 
+                  // Use flex, padding, alignment, hover state on the link itself
+                  className="flex items-center p-3 gap-3 transition-colors hover:bg-muted/50" 
+                >
+                  {/* Left Icon */}
+                  <div className="p-2 bg-muted rounded-full flex-shrink-0">
+                    <User className="h-5 w-5 text-muted-foreground" /> 
+                  </div>
+                  
+                  {/* Center Content (Name) - Grow to take space */}
+                  <div className="flex-grow">
+                    <p className="font-medium text-sm">{client.name}</p>
+                    {/* Placeholder for future secondary details */}
+                    {/* <p className="text-xs text-muted-foreground">34 years old</p> */}
+                  </div>
+
+                  {/* Right Action Icons */}
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {/* Delete Button (Non-functional for now) */}
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive" 
+                      onClick={(e) => { 
+                        e.preventDefault(); // Prevent link navigation
+                        console.log("Delete client clicked:", client.id); 
+                        // Add actual delete confirmation/logic later
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                      <span className="sr-only">Delete Client</span>
+                    </Button>
+                    {/* Navigate Icon */}
+                    <ChevronRight className="h-5 w-5 text-muted-foreground" /> 
+                  </div>
+                </Link>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Add Client Dialog and Trigger Button - Moved outside the scrollable area */}
+      <Dialog open={isDialogOpen} onOpenChange={handleDialogChange}> 
           <DialogTrigger asChild>
-              <Button variant="outline" className="w-full mt-6">
-                  <Plus className="mr-2 h-4 w-4" /> Add New Client
+              {/* Changed variant to default (filled), added icon gap */}
+              <Button className="w-full mt-6 gap-2"> 
+                  <Plus className="h-4 w-4" /> Add New Client
               </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
