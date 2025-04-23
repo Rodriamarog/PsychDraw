@@ -415,28 +415,54 @@ export function AnalysisDetail() {
         const pdfImageHeight = (imgProps.height * pdfImageWidth) / imgProps.width; // Total height of the scaled image
         
         const pageContentHeight = pageHeight - 2 * pdfMargin; // Max content height per page within margins
-        const numPages = Math.ceil(pdfImageHeight / pageContentHeight); // Calculate total pages needed
         
-        let position = pdfMargin; // Initial Y position for drawing on PDF (starts at top margin)
-        let sourceY = 0; // The Y coordinate in the *source canvas* to start drawing from
+        // Draw the first page/slice
+        const firstPageCanvas = document.createElement('canvas');
+        firstPageCanvas.width = canvas.width;
+        firstPageCanvas.height = pageContentHeight * (canvas.width / pdfImageWidth); // Calculate source height for one page
+        const firstPageCtx = firstPageCanvas.getContext('2d');
+        if (firstPageCtx) {
+            firstPageCtx.drawImage(canvas, 0, 0, canvas.width, firstPageCanvas.height, 0, 0, canvas.width, firstPageCanvas.height);
+            const firstPageImgData = firstPageCanvas.toDataURL('image/png');
+            pdf.addImage(firstPageImgData, 'PNG', pdfMargin, pdfMargin, pdfImageWidth, pageContentHeight); 
+        } else {
+             console.error("Could not get 2D context for first page canvas slice");
+             // Fallback: Add the whole image and hope jsPDF clips (less reliable)
+             pdf.addImage(imgData, 'PNG', pdfMargin, pdfMargin, pdfImageWidth, pdfImageHeight);
+        }
+        let heightDrawn = pageContentHeight;
 
-        for (let i = 1; i <= numPages; i++) {
-            // Add new page for pages after the first
-            if (i > 1) {
-                pdf.addPage();
+        // Add subsequent pages if needed
+        let pageIndex = 1;
+        while (heightDrawn < pdfImageHeight) {
+            pdf.addPage();
+            const sourceY = pageIndex * pageContentHeight * (canvas.width / pdfImageWidth); // Calculate Y offset in original canvas resolution
+            const sourceHeight = Math.min(pageContentHeight * (canvas.width / pdfImageWidth), canvas.height - sourceY); // Height to clip from source
+            
+            if (sourceHeight <= 0) break; // Safety break if calculation is off
+
+            const nextPageCanvas = document.createElement('canvas');
+            nextPageCanvas.width = canvas.width;
+            nextPageCanvas.height = sourceHeight;
+            const nextPageCtx = nextPageCanvas.getContext('2d');
+            
+            if (nextPageCtx) {
+                nextPageCtx.drawImage(canvas, 0, sourceY, canvas.width, sourceHeight, 0, 0, canvas.width, sourceHeight);
+                const nextPageImgData = nextPageCanvas.toDataURL('image/png');
+                 // Draw the clipped slice onto the PDF page
+                pdf.addImage(nextPageImgData, 'PNG', pdfMargin, pdfMargin, pdfImageWidth, pageContentHeight);
+            } else {
+                 console.error(`Could not get 2D context for page ${pageIndex + 1} canvas slice`);
+                 // Potentially add a placeholder or skip page if context fails
             }
-            
-            // Add the image slice for the current page
-            // The position argument dictates where the *source image's* top-left (or adjusted top-left) 
-            // should be placed relative to the PDF page's top-left.
-            // By subtracting pageHeight repeatedly, we effectively shift the source image up
-            // so the correct slice aligns with the top margin.
-            pdf.addImage(imgData, 'PNG', pdfMargin, position, pdfImageWidth, pdfImageHeight);
-            
-            // Adjust the position for the next page's draw operation
-            position -= pageHeight; 
+
+            heightDrawn += pageContentHeight;
+            pageIndex++;
         }
         
+        // Remove debugging rectangles if they exist
+        // pdf.setDrawColor(0, 0, 0); // Reset draw color if needed
+
         // --- 4. Save PDF --- 
         const filename = `Report-${analysis.client_name?.replace(/\s+/g, '_') || 'Client'}-${new Date().toISOString().split('T')[0]}.pdf`;
         pdf.save(filename);
