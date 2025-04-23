@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { supabase } from '@/lib/supabaseClient';
-import { ArrowLeft, FilePlus2, FileText, Home, TreeDeciduous, User, Users, ChevronRight, XIcon } from 'lucide-react'; // Icons
+import { ArrowLeft, FilePlus2, FileText, Home, TreeDeciduous, User, Users, ChevronRight, XIcon, ClipboardList, Loader2 } from 'lucide-react'; // Icons
 import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
 import { Label } from "@/components/ui/label"; // Import Label
 // Import motion and AnimatePresence
@@ -15,6 +15,7 @@ import type { Database } from '@/lib/database.types';
 type ClientDetails = Database['public']['Tables']['clients']['Row'];
 // Define the shape for the analysis query result, including the joined type
 type AnalysisQueryResult = (Database['public']['Tables']['drawing_analyses']['Row'] & {
+  // Ensure Row includes temp_drawing_path and drawing_processed from the base type
   drawing_types: Pick<Database['public']['Tables']['drawing_types']['Row'], 'name'> | null;
 });
 
@@ -147,6 +148,9 @@ export function ClientDetail() {
                     id,
                     analysis_date,
                     title,
+                    temp_drawing_path,
+                    drawing_processed,
+                    raw_analysis,
                     drawing_types!fk_drawing_type ( name ) 
                 `)
                 .eq('client_id', clientId)
@@ -401,38 +405,56 @@ export function ClientDetail() {
         </CardHeader>
         <CardContent>
           {loadingAnalyses ? (
-            <div className="space-y-3">
-              <Skeleton className="h-10 w-full rounded-md" />
-              <Skeleton className="h-10 w-full rounded-md" />
-            </div>
-          ) : analyses.length === 0 ? (
-            <div className="text-center py-6 text-muted-foreground border border-dashed rounded-md">
-              <p>No analyses found for this client yet.</p>
-              {/* Optional: Add a subtle 'Start New Analysis' button here too? */} 
-            </div>
-          ) : (
-            <ul className="space-y-3">
-              {analyses.map(analysis => (
-                <li 
-                  key={analysis.id} 
-                  className="p-3 border rounded-md flex justify-between items-center hover:bg-muted/50 cursor-pointer"
-                >
-                  <div>
-                    <span className="font-medium">
-                      {analysis.title || 'Untitled Analysis'} 
-                      ({analysis.drawing_types?.name || 'Unknown Type'})
-                    </span>
-                    <p className="text-sm text-muted-foreground">
-                      Date: {analysis.analysis_date 
-                              ? new Date(analysis.analysis_date).toLocaleDateString()
-                              : 'Date not available'}
-                    </p>
-                  </div>
-                  {/* TODO: Add actions like View/Delete later */}
-                  {/* <Button variant="ghost" size="sm">View</Button> */}
-                </li>
-              ))}
+            <p>Loading analysis history...</p> 
+          ) : analyses.length > 0 ? (
+            <ul className="divide-y divide-border -mx-6 -my-4"> 
+              {analyses.map((analysis) => {
+                const showProcessedIcon = analysis.drawing_processed;
+                // Define IconComponent based on processed status
+                const IconComponent = showProcessedIcon ? ClipboardList : Loader2;
+
+                const itemContent = (
+                  <>
+                    <IconComponent 
+                      className={`h-5 w-5 mr-3 flex-shrink-0 ${ 
+                        showProcessedIcon 
+                          ? 'text-primary' 
+                          : 'text-muted-foreground animate-spin' 
+                      }`} // Correct class logic
+                    />
+                    <div className="flex-grow">
+                      <p className="font-medium text-sm">
+                        {/* Prioritize Drawing Type Name */}
+                        {analysis.drawing_types?.name || analysis.title || 'Analysis Details'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {analysis.analysis_date ? new Date(analysis.analysis_date).toLocaleString() : 'Date unknown'}
+                      </p>
+                    </div>
+                    {showProcessedIcon && <ChevronRight className="h-5 w-5 text-muted-foreground ml-auto" />}
+                  </>
+                );
+
+                return (
+                  <li key={analysis.id} className="px-6 py-3 first:pt-0 last:pb-0"> 
+                    {showProcessedIcon ? (
+                       <Link 
+                          to={`/analysis/${analysis.id}`}
+                          className="flex items-center w-full hover:bg-muted/50 rounded -mx-2 px-2 py-1 transition-colors duration-150"
+                        >
+                          {itemContent}
+                        </Link>
+                    ) : (
+                      <div className="flex items-center w-full -mx-2 px-2 py-1 opacity-70 cursor-default"> 
+                        {itemContent}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground">No analysis history found for this client.</p>
           )}
         </CardContent>
       </Card>

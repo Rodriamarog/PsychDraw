@@ -1,17 +1,44 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Camera, CameraOff, ArrowLeft, Check, RefreshCcw } from 'lucide-react';
+import { Camera, CameraOff, ArrowLeft, Check, RefreshCcw, Image, Loader2 } from 'lucide-react';
+import { supabase } from '@/lib/supabaseClient';
+import { v4 as uuidv4 } from 'uuid';
+import { useAuth } from '@/contexts/AuthContext';
+
+// Helper function to convert Data URL to Blob
+function dataURLtoBlob(dataurl: string): Blob | null {
+    try {
+        const arr = dataurl.split(',');
+        if (!arr[0]) return null;
+        const mimeMatch = arr[0].match(/:(.*?);/);
+        if (!mimeMatch || !mimeMatch[1]) return null;
+        const mime = mimeMatch[1];
+        const bstr = atob(arr[arr.length - 1]); // Use arr.length - 1 for robustness
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while(n--){
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+        return new Blob([u8arr], {type:mime});
+    } catch (error) {
+        console.error("Error converting data URL to Blob:", error);
+        return null;
+    }
+}
 
 export function CaptureDrawing() {
   const { clientId, drawingTypeId } = useParams<{ clientId: string; drawingTypeId: string }>();
+  const { user } = useAuth();
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isCameraOn, setIsCameraOn] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [isConfirming, setIsConfirming] = useState(false);
 
   // Function to start the camera stream
   const startCamera = async () => {
@@ -100,10 +127,102 @@ export function CaptureDrawing() {
     // No need to restart camera, stream is still active
   };
 
-  const handleConfirmPhoto = () => {
-    if (capturedImage) {
-      console.log("Confirming image:", capturedImage.substring(0, 50) + "...");
+  const handleConfirmPhoto = async () => {
+    if (!capturedImage || !clientId || !drawingTypeId || !user) {
+        setError("Missing required data or user information to confirm photo.");
+        return;
     }
+
+    setIsConfirming(true);
+    setError(null);
+
+    try {
+        const blob = dataURLtoBlob(capturedImage);
+        if (!blob) {
+            throw new Error("Failed to convert image data.");
+        }
+
+        // Define unique file path starting with psychologist ID
+        const fileExt = blob.type.split('/')[1] || 'jpg'; // Get extension from mime type
+        const filePath = `${user.id}/${clientId}/${drawingTypeId}-${uuidv4()}.${fileExt}`; // Corrected path structure
+
+        // Upload to Supabase Storage
+        console.log(`Uploading to: ${filePath}`);
+        const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('temp-drawings') // Corrected bucket name
+            .upload(filePath, blob, {
+                contentType: blob.type,
+                upsert: false // Don't overwrite existing files (optional)
+            });
+
+        if (uploadError) {
+            console.error("Supabase Storage Error:", uploadError);
+            throw new Error(`Failed to upload image: ${uploadError.message}`);
+        }
+        console.log("Upload successful:", uploadData);
+
+        // Insert into Database using temp_drawing_path
+        const { error: dbError } = await supabase
+            .from('drawing_analyses')
+            .insert({
+                client_id: clientId,
+                drawing_type_id: drawingTypeId,
+                temp_drawing_path: filePath, // Save the storage path
+                psychologist_id: user.id, // Make sure psychologist_id is included!
+                raw_analysis: {} // Add default empty JSONB for raw_analysis (assuming NOT NULL)
+            });
+
+        if (dbError) {
+            console.error("Database Insert Error:", dbError);
+            // TODO: Consider deleting the uploaded image from storage if DB insert fails?
+            throw new Error(`Failed to save analysis record: ${dbError.message}`);
+        }
+
+        console.log("Analysis record created successfully!");
+        // Success - Navigate back to client detail page
+        navigate(`/client/${clientId}`); // Navigate directly to ensure state refresh
+
+    } catch (err: any) {
+        console.error("Error during confirmation:", err);
+        setError(err.message || "An unexpected error occurred during confirmation.");
+    } finally {
+        setIsConfirming(false);
+    }
+  };
+
+  // Function to handle file selection from gallery
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setError(null); // Clear previous errors
+    const file = event.target.files?.[0];
+    if (file) {
+      // Basic type check
+      if (!file.type.startsWith('image/')) {
+        setError("Selected file is not an image.");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (loadEvent) => {
+        if (loadEvent.target?.result) {
+          setCapturedImage(loadEvent.target.result as string);
+        } else {
+          setError("Failed to read selected file.");
+        }
+      };
+      reader.onerror = () => {
+        setError("Error reading file.");
+      };
+      reader.readAsDataURL(file);
+    }
+     // Reset input value so the same file can be selected again if needed
+     if (event.target) {
+         event.target.value = "";
+     }
+  };
+
+  // Function to trigger file input click
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
   };
 
   return (
@@ -162,20 +281,34 @@ export function CaptureDrawing() {
       </div>
 
       <canvas ref={canvasRef} style={{ display: 'none' }} />
+      <input 
+        type="file" 
+        accept="image/*" 
+        ref={fileInputRef} 
+        onChange={handleFileSelect} 
+        style={{ display: 'none' }} 
+      />
 
       <div className="flex justify-center gap-4 mt-4">
          {capturedImage ? (
             <>
-                <Button variant="outline" onClick={retakePhoto}>
+                <Button variant="outline" onClick={retakePhoto} disabled={isConfirming}>
                     <RefreshCcw className="mr-2 h-4 w-4" /> Retake
                 </Button>
-                <Button size="lg" onClick={handleConfirmPhoto}>
-                    <Check className="mr-2 h-4 w-4" /> Confirm
+                <Button size="lg" onClick={handleConfirmPhoto} disabled={isConfirming}>
+                    {isConfirming ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                        <Check className="mr-2 h-4 w-4" /> 
+                    )}
+                    {isConfirming ? 'Confirming...' : 'Confirm'}
                 </Button> 
             </>
          ) : (
             <>
-                <Button variant="outline" disabled={!isCameraOn}>Gallery</Button>
+                <Button variant="outline" onClick={triggerFileInput}> 
+                    <Image className="mr-2 h-4 w-4" /> Gallery 
+                </Button>
                 <Button size="lg" disabled={!isCameraOn} onClick={capturePhoto}>
                     <Camera className="mr-2 h-4 w-4" /> Capture
                 </Button> 
