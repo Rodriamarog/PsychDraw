@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { ArrowLeft, FilePlus2, FileText, Home, TreeDeciduous, User, Users, ChevronRight, XIcon, ClipboardList, Loader2 } from 'lucide-react'; // Icons
 import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
 import { Label } from "@/components/ui/label"; // Import Label
+import { Badge } from "@/components/ui/badge"; // Import Badge
 // Import motion and AnimatePresence
 import { motion, AnimatePresence } from 'framer-motion'; 
 // Import generated types
@@ -270,7 +271,7 @@ export function ClientDetail() {
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="flex items-center gap-3">
-            <Button asChild variant="outline" size="icon" className="h-8 w-8">
+            <Button asChild variant="ghost" size="icon" className="h-8 w-8">
                 <Link to="/"> 
                     <ArrowLeft className="h-4 w-4" />
                     <span className="sr-only">Back to Clients</span>
@@ -278,17 +279,24 @@ export function ClientDetail() {
             </Button>
             <h1 className="text-2xl font-bold tracking-tight">{client.name}</h1>
         </div>
-        <div className="flex items-center gap-2 justify-end">
-            {/* TODO: Add Edit Client Button/Functionality */}
-            <Button variant="outline" size="sm">Edit Client</Button>
-            
-            {/* Changed to standard button to open manual modal */}
+        {/* Apply v0 responsive classes and justification */}
+        <div className="flex flex-col w-full gap-2 sm:flex-row sm:gap-3">
+            {/* Add justify-center and use sm breakpoint */}
             <Button 
-                size="sm" 
-                disabled={loadingTypes || !!error} 
-                onClick={() => setIsAnalysisDialogOpen(true)} // Open modal on click
+              variant="outline" 
+              className="w-full sm:w-auto justify-center cursor-pointer"
             >
-                <FilePlus2 className="mr-2 h-4 w-4" />
+              Edit Client
+            </Button> 
+            
+            {/* Add justify-center, use sm breakpoint, ensure icon gap */}
+            <Button 
+                // variant default (filled)
+                disabled={loadingTypes || !!error} 
+                onClick={() => setIsAnalysisDialogOpen(true)}
+                className="w-full sm:w-auto justify-center gap-2 cursor-pointer"
+            >
+                <FilePlus2 className="h-4 w-4" /> 
                 Start New Analysis
             </Button>
         </div>
@@ -399,9 +407,15 @@ export function ClientDetail() {
 
       {/* Analysis History Section */}
       <Card>
-        <CardHeader>
-          <CardTitle>Analysis History</CardTitle>
-          <CardDescription>View past analyses for {client.name}.</CardDescription>
+        <CardHeader className="flex flex-row items-center justify-between"> {/* Added flex for badge positioning */}
+          <div> {/* Wrap title/description */} 
+            <CardTitle>Analysis History</CardTitle>
+            <CardDescription>View past analyses for {client.name}.</CardDescription>
+          </div>
+          {/* Added Badge for total count */}
+          {!loadingAnalyses && analyses.length > 0 && (
+             <Badge variant="secondary">{analyses.length} Total</Badge>
+          )}
         </CardHeader>
         <CardContent>
           {loadingAnalyses ? (

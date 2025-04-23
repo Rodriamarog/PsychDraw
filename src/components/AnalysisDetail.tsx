@@ -129,7 +129,8 @@ export function AnalysisDetail() {
   const [drawingImageUrl, setDrawingImageUrl] = useState<string | null>(null); 
   const [imageLoading, setImageLoading] = useState(true); 
   const { session } = useAuth(); // Get session from AuthContext
-  const userEmail = session?.user?.email || 'Unknown Analyst'; // Get user email, provide fallback
+  // Attempt to get full name, fall back to email, then to generic
+  const analystIdentifier = session?.user?.user_metadata?.full_name || session?.user?.email || 'Unknown Analyst'; 
 
   // Move parsedAnalysis state here
   const [parsedAnalysis, setParsedAnalysis] = useState<ParsedAnalysis | null>(null);
@@ -281,7 +282,7 @@ export function AnalysisDetail() {
         .replace('{{CLIENT_NAME}}', escapeHtml(analysis.client_name || 'N/A'))
         .replace('{{ANALYSIS_DATE}}', analysis.analysis_date ? new Date(analysis.analysis_date).toLocaleDateString() : 'N/A')
         .replace('{{DRAWING_TYPE}}', escapeHtml(analysis.drawing_type_name || 'N/A'))
-        .replace('{{ANALYST_NAME}}', escapeHtml(userEmail)) // Add analyst email
+        .replace('{{ANALYST_NAME}}', escapeHtml(analystIdentifier)) // Use the identifier here
         .replace('{{DRAWING_IMAGE_TAG}}', drawingImageTag) // Inject the image tag
         .replace('{{ANALYSIS_SECTIONS}}', analysisSectionsHtml)
         .replace('{{GENERATION_DATE}}', new Date().toLocaleDateString());
