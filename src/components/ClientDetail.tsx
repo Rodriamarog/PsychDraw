@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { supabase } from '@/lib/supabaseClient';
-import { ArrowLeft, FilePlus2, FileText, Home, TreeDeciduous, User, Users, ChevronRight, XIcon, ClipboardList, Loader2 } from 'lucide-react'; // Icons
+import { ArrowLeft, FilePlus2, FileText, Home, TreeDeciduous, User, Users, ChevronRight, XIcon, ClipboardList, Loader2, ChevronLeft } from 'lucide-react'; // Icons
 import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
 import { Label } from "@/components/ui/label"; // Import Label
 import { Badge } from "@/components/ui/badge"; // Import Badge
@@ -101,12 +101,22 @@ export function ClientDetail() {
   // State for New Analysis Dialog
   const [isAnalysisDialogOpen, setIsAnalysisDialogOpen] = useState(false);
   
+  // Pagination State
+  const ITEMS_PER_PAGE = 5;
+  const [currentPage, setCurrentPage] = useState(1);
+
   // State for the new analysis form inside the dialog
   const [selectedDrawingTypeId, setSelectedDrawingTypeId] = useState<string>("");
   const [analysisTitle, setAnalysisTitle] = useState(""); // Add state for title later
   const [drawingImageFile, setDrawingImageFile] = useState<File | null>(null); // Add state for image later
   const [isStartingAnalysis, setIsStartingAnalysis] = useState(false); // Loading state for submission
   const [startAnalysisError, setStartAnalysisError] = useState<string | null>(null); // Error state for submission
+
+  // Calculate pagination variables
+  const totalPages = Math.ceil(analyses.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedAnalyses = analyses.slice(startIndex, endIndex);
 
   // --- Data Fetching Effects --- (Basic implementations)
   useEffect(() => {
@@ -421,54 +431,90 @@ export function ClientDetail() {
           {loadingAnalyses ? (
             <p>Loading analysis history...</p> 
           ) : analyses.length > 0 ? (
-            <ul className="divide-y divide-border -mx-6 -my-4"> 
-              {analyses.map((analysis) => {
-                const showProcessedIcon = analysis.drawing_processed;
-                // Define IconComponent based on processed status
-                const IconComponent = showProcessedIcon ? ClipboardList : Loader2;
+            <ul className="divide-y divide-border -mx-6 -my-4 relative"> {/* Added relative positioning for potential absolute animation elements */}
+              <AnimatePresence mode="wait">
+                {paginatedAnalyses.map((analysis) => {
+                  const showProcessedIcon = analysis.drawing_processed;
+                  const IconComponent = showProcessedIcon ? ClipboardList : Loader2;
 
-                const itemContent = (
-                  <>
-                    <IconComponent 
-                      className={`h-5 w-5 mr-3 flex-shrink-0 ${ 
-                        showProcessedIcon 
-                          ? 'text-primary' 
-                          : 'text-muted-foreground animate-spin' 
-                      }`} // Correct class logic
-                    />
-                    <div className="flex-grow">
-                      <p className="font-medium text-sm">
-                        {/* Prioritize Drawing Type Name */}
-                        {analysis.drawing_types?.name || analysis.title || 'Analysis Details'}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {analysis.analysis_date ? new Date(analysis.analysis_date).toLocaleString() : 'Date unknown'}
-                      </p>
-                    </div>
-                    {showProcessedIcon && <ChevronRight className="h-5 w-5 text-muted-foreground ml-auto" />}
-                  </>
-                );
-
-                return (
-                  <li key={analysis.id} className="px-6 py-3 first:pt-0 last:pb-0"> 
-                    {showProcessedIcon ? (
-                       <Link 
-                          to={`/analysis/${analysis.id}`}
-                          className="flex items-center w-full hover:bg-muted/50 rounded -mx-2 px-2 py-1 transition-colors duration-150"
-                        >
-                          {itemContent}
-                        </Link>
-                    ) : (
-                      <div className="flex items-center w-full -mx-2 px-2 py-1 opacity-70 cursor-default"> 
-                        {itemContent}
+                  const itemContent = (
+                    <>
+                      <IconComponent 
+                        className={`h-5 w-5 mr-3 flex-shrink-0 ${ 
+                          showProcessedIcon 
+                            ? 'text-primary' 
+                            : 'text-muted-foreground animate-spin' 
+                        }`} 
+                      />
+                      <div className="flex-grow">
+                        <p className="font-medium text-sm">
+                          {analysis.drawing_types?.name || analysis.title || 'Analysis Details'}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {analysis.analysis_date ? new Date(analysis.analysis_date).toLocaleString() : 'Date unknown'}
+                        </p>
                       </div>
-                    )}
-                  </li>
-                );
-              })}
+                      {showProcessedIcon && <ChevronRight className="h-5 w-5 text-muted-foreground ml-auto" />}
+                    </>
+                  );
+
+                  // Change li to motion.li and add animation props
+                  return (
+                    <motion.li 
+                      key={analysis.id} // Key is crucial for AnimatePresence
+                      className="px-6 py-3 first:pt-0 last:pb-0" 
+                      initial={{ opacity: 0, y: 10 }} 
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      {showProcessedIcon ? (
+                         <Button asChild variant="ghost" className="w-full justify-start h-auto px-2 py-3">
+                           <Link 
+                              to={`/analysis/${analysis.id}`}
+                              className="flex items-center w-full transition-colors duration-150" 
+                            >
+                              {itemContent}
+                            </Link>
+                         </Button>
+                      ) : (
+                        <div className="flex items-center w-full -mx-2 px-2 py-1 opacity-70 cursor-default"> 
+                          {itemContent}
+                        </div>
+                      )}
+                    </motion.li>
+                  );
+                })}
+              </AnimatePresence>
             </ul>
           ) : (
             <p className="text-sm text-muted-foreground">No analysis history found for this client.</p>
+          )}
+          {/* Add Pagination Controls if more than one page */} 
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 pt-4 mt-4 border-t border-border"> 
+              <Button 
+                variant="outline"
+                size="icon"
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                <span className="sr-only">Previous Page</span>
+              </Button>
+              <span className="text-sm text-muted-foreground"> 
+                Page {currentPage} of {totalPages}
+              </span>
+              <Button 
+                variant="outline"
+                size="icon"
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                disabled={currentPage === totalPages}
+              >
+                <ChevronRight className="h-4 w-4" />
+                <span className="sr-only">Next Page</span>
+              </Button>
+            </div>
           )}
         </CardContent>
       </Card>
