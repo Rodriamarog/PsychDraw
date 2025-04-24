@@ -215,8 +215,8 @@ export function ClientList() {
             ) : filteredClients.length === 0 ? (
               <div className="text-center p-4 text-muted-foreground mt-4">
                 No clients match "{searchTerm}".
-              </div>
-            ) : (
+        </div>
+      ) : (
               <div className="space-y-3"> 
                 {filteredClients.map((client) => ( // Map over filteredClients
                   <Card key={client.id} className="overflow-hidden p-3"> 

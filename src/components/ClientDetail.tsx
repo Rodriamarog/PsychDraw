@@ -131,7 +131,7 @@ export function ClientDetail() {
   // Pagination State
   const ITEMS_PER_PAGE = 5;
   const [currentPage, setCurrentPage] = useState(1);
-
+  
   // State for the new analysis form inside the dialog
   const [selectedDrawingTypeId, setSelectedDrawingTypeId] = useState<string>("");
   const [analysisTitle, setAnalysisTitle] = useState(""); // Add state for title later
@@ -185,7 +185,7 @@ export function ClientDetail() {
                 .select(`
                     id, analysis_date, title, temp_drawing_path, 
                     drawing_processed, raw_analysis, 
-                    drawing_types!fk_drawing_type ( name )
+                    drawing_types!fk_drawing_type ( name ) 
                 `)
                 .eq('client_id', clientId)
                 .order('analysis_date', { ascending: false })
@@ -512,7 +512,7 @@ export function ClientDetail() {
             </Button>
             {/* Client Name and Details - Use flex for inline display */}
             <div className="flex items-baseline gap-4"> {/* Changed items-center back to items-baseline */} 
-              <h1 className="text-2xl font-bold tracking-tight">{client.name}</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{client.name}</h1>
               {/* Conditionally render age and gender inline */}
               {(client.age || client.gender) && ( 
                 <span className="text-sm text-muted-foreground">
@@ -796,11 +796,11 @@ export function ClientDetail() {
                       {isUpdatingClient ? "Saving..." : "Save Changes"}
                     </Button>
                   </div>
-                </div>
-              </Card>
-            </motion.div>
-          </>
-        )}
+                          </div>
+                      </Card>
+                  </motion.div>
+              </>
+          )}
       </AnimatePresence>
 
       {/* Analysis History Section */}
@@ -842,25 +842,25 @@ export function ClientDetail() {
                   
                   const IconComponent = showSpinner ? Loader2 : ClipboardList; // Use spinner or final icon
 
-                  const itemContent = (
-                    <>
-                      <IconComponent 
-                        className={`h-5 w-5 mr-3 flex-shrink-0 ${ 
+                const itemContent = (
+                  <>
+                    <IconComponent 
+                      className={`h-5 w-5 mr-3 flex-shrink-0 ${ 
                           showSpinner 
                             ? 'text-muted-foreground animate-spin' // Spinner style
                             : 'text-primary' // Completed style
                         }`} 
-                      />
-                      <div className="flex-grow">
+                    />
+                    <div className="flex-grow">
                         {/* Show stage text or final details */} 
                         {currentStage === 'complete' ? (
                           <>
-                            <p className="font-medium text-sm">
-                              {analysis.drawing_types?.name || analysis.title || 'Analysis Details'}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {analysis.analysis_date ? new Date(analysis.analysis_date).toLocaleString() : 'Date unknown'}
-                            </p>
+                      <p className="font-medium text-sm">
+                        {analysis.drawing_types?.name || analysis.title || 'Analysis Details'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {analysis.analysis_date ? new Date(analysis.analysis_date).toLocaleString() : 'Date unknown'}
+                      </p>
                           </>
                         ) : (
                           // Add placeholder paragraph for alignment
@@ -869,14 +869,14 @@ export function ClientDetail() {
                             <p className="text-xs invisible" aria-hidden="true">&nbsp;</p> {/* Placeholder */} 
                           </>
                         )}
-                      </div>
+                    </div>
                       {/* Only show chevron if complete */}
                       {currentStage === 'complete' && <ChevronRight className="h-5 w-5 text-muted-foreground ml-auto" />} 
-                    </>
-                  );
+                  </>
+                );
 
                   // Change li to motion.li and add animation props
-                  return (
+                return (
                     <motion.li 
                       key={analysis.id} // Key is crucial for AnimatePresence
                       className="px-6 py-3 first:pt-0 last:pb-0" 
@@ -888,22 +888,22 @@ export function ClientDetail() {
                       {/* Render Button/Link only when complete */} 
                       {currentStage === 'complete' ? (
                          <Button asChild variant="ghost" className="w-full justify-start h-auto px-2 py-2">
-                           <Link 
-                              to={`/analysis/${analysis.id}`}
+                       <Link 
+                          to={`/analysis/${analysis.id}`}
                               className="flex items-center w-full transition-colors duration-150" 
-                            >
-                              {itemContent}
-                            </Link>
+                        >
+                          {itemContent}
+                        </Link>
                          </Button>
-                      ) : (
+                    ) : (
                         // Non-clickable div while processing
                         <div className="flex items-center w-full -mx-2 px-2 py-2 opacity-70 cursor-default"> 
-                          {itemContent}
-                        </div>
-                      )}
+                        {itemContent}
+                      </div>
+                    )}
                     </motion.li>
-                  );
-                })}
+                );
+              })}
               </AnimatePresence>
             </ul>
           ) : (

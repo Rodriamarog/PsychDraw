@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Camera, CameraOff, ArrowLeft, Check, RefreshCcw, Image, Loader2 } from 'lucide-react';
+import { Camera, CameraOff, ArrowLeft, Check, RefreshCw, Image as ImageIcon, Loader2, RotateCw } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '@/contexts/AuthContext';
@@ -38,7 +38,11 @@ export function CaptureDrawing() {
   const [error, setError] = useState<string | null>(null);
   const [isCameraOn, setIsCameraOn] = useState(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [originalImage, setOriginalImage] = useState<string | null>(null); // Store the original, unrotated image
   const [isConfirming, setIsConfirming] = useState(false);
+  // State for dynamic aspect ratio
+  const [videoAspectRatio, setVideoAspectRatio] = useState<number>(3/4); // Default aspect ratio (e.g., portrait)
+  const [rotationAngle, setRotationAngle] = useState(0); // Track the current rotation angle
 
   // Function to start the camera stream
   const startCamera = async () => {
@@ -81,6 +85,18 @@ export function CaptureDrawing() {
     }
   };
 
+  // Function called when video metadata is loaded
+  const handleVideoMetadataLoaded = () => {
+    if (videoRef.current) {
+      const video = videoRef.current;
+      const aspectRatio = video.videoWidth / video.videoHeight;
+      if (aspectRatio && !isNaN(aspectRatio)) {
+        setVideoAspectRatio(aspectRatio);
+        console.log("Video aspect ratio set:", aspectRatio);
+      }
+    }
+  };
+
   // Request camera access on mount
   useEffect(() => {
     startCamera(); // Call the reusable function
@@ -112,6 +128,8 @@ export function CaptureDrawing() {
 
         const dataUrl = canvas.toDataURL('image/jpeg');
         setCapturedImage(dataUrl);
+        setOriginalImage(dataUrl); // Store original image for rotations
+        setRotationAngle(0); // Reset rotation angle
       } else {
         setError("Failed to get canvas context.");
       }
@@ -123,8 +141,93 @@ export function CaptureDrawing() {
   // Simplified retake function - just clear the image
   const retakePhoto = () => {
     setCapturedImage(null);
+    setOriginalImage(null); // Clear original image too
+    setRotationAngle(0); // Reset rotation angle
     setError(null); // Also clear any capture-related errors if needed
     // No need to restart camera, stream is still active
+  };
+
+  // Function to handle file selection from gallery
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setError(null); // Clear previous errors
+    const file = event.target.files?.[0];
+    if (file) {
+      // Basic type check
+      if (!file.type.startsWith('image/')) {
+        setError("Selected file is not an image.");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (loadEvent) => {
+        if (loadEvent.target?.result) {
+          const imageData = loadEvent.target.result as string;
+          setCapturedImage(imageData);
+          setOriginalImage(imageData); // Store original image for rotations
+          setRotationAngle(0); // Reset rotation angle
+        } else {
+          setError("Failed to read selected file.");
+        }
+      };
+      reader.onerror = () => {
+        setError("Error reading file.");
+      };
+      reader.readAsDataURL(file);
+    }
+     // Reset input value so the same file can be selected again if needed
+     if (event.target) {
+         event.target.value = "";
+     }
+  };
+
+  // Function to rotate the captured image
+  const rotateImage = () => {
+    if (!originalImage) return; // Use originalImage instead of capturedImage
+
+    // Calculate new rotation angle (add 90 degrees)
+    const newRotationAngle = (rotationAngle + 90) % 360;
+    
+    // Create a temporary image to get dimensions
+    const img = new window.Image();
+    img.src = originalImage; // Always use the original image for rotation
+    
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      if (!ctx) return;
+      
+      // Determine if output should be portrait or landscape
+      const isPortrait = newRotationAngle === 90 || newRotationAngle === 270;
+      
+      // Set canvas dimensions based on rotation
+      if (isPortrait) {
+        canvas.width = img.height;
+        canvas.height = img.width;
+      } else {
+        canvas.width = img.width;
+        canvas.height = img.height;
+      }
+      
+      // Clear the canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Translate to center of canvas
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate((newRotationAngle * Math.PI) / 180);
+      
+      // Draw the image centered
+      ctx.drawImage(
+        img, 
+        -img.width / 2,
+        -img.height / 2
+      );
+      
+      // Update the image state with the rotated version
+      const rotatedImage = canvas.toDataURL('image/jpeg');
+      setCapturedImage(rotatedImage); // Only update the displayed image
+      setRotationAngle(newRotationAngle);
+    };
   };
 
   const handleConfirmPhoto = async () => {
@@ -190,36 +293,6 @@ export function CaptureDrawing() {
     }
   };
 
-  // Function to handle file selection from gallery
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setError(null); // Clear previous errors
-    const file = event.target.files?.[0];
-    if (file) {
-      // Basic type check
-      if (!file.type.startsWith('image/')) {
-        setError("Selected file is not an image.");
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = (loadEvent) => {
-        if (loadEvent.target?.result) {
-          setCapturedImage(loadEvent.target.result as string);
-        } else {
-          setError("Failed to read selected file.");
-        }
-      };
-      reader.onerror = () => {
-        setError("Error reading file.");
-      };
-      reader.readAsDataURL(file);
-    }
-     // Reset input value so the same file can be selected again if needed
-     if (event.target) {
-         event.target.value = "";
-     }
-  };
-
   // Function to trigger file input click
   const triggerFileInput = () => {
     fileInputRef.current?.click();
@@ -240,7 +313,12 @@ export function CaptureDrawing() {
         <h2 className="text-xl font-semibold">Capture Drawing</h2>
       </div>
 
-      <div className="relative w-full max-w-md aspect-[3/4] bg-muted rounded-md overflow-hidden mb-4 border mx-auto">
+      {/* Camera container - Apply dynamic aspect ratio */}
+      {/* Removed aspect-[3/4] class, added inline style */}
+      <div 
+        className="relative w-full max-w-md bg-muted rounded-md overflow-hidden mb-4 border mx-auto"
+        style={{ aspectRatio: videoAspectRatio }}
+      >
           {/* Error Display (always check first) */}
           {error && (
               <div className="absolute inset-0 flex items-center justify-center text-destructive text-center p-4 z-20 bg-background/80">
@@ -248,23 +326,26 @@ export function CaptureDrawing() {
               </div>
           )}
 
-          {/* Video Feed (Always rendered if camera is on and no error) */}
+          {/* Video Feed - Add onLoadedMetadata and hide if image captured */}
           {!error && (
               <video 
                   ref={videoRef} 
                   autoPlay 
                   playsInline 
                   muted 
-                  className={`w-full h-full object-cover ${isCameraOn ? '' : 'hidden'}`} // Only hide if camera is off
+                  onLoadedMetadata={handleVideoMetadataLoaded} // Add handler
+                  // Hide if camera off OR if an image is captured
+                  className={`w-full h-full object-cover ${ (isCameraOn && !capturedImage) ? '' : 'hidden'}`} 
               />
           )}
           
-          {/* Captured Image Preview (Absolutely positioned overlay) */}
+          {/* Captured Image Preview - Change to object-contain */}
           {capturedImage && (
               <img 
                   src={capturedImage} 
                   alt="Captured drawing" 
-                  className="absolute inset-0 w-full h-full object-cover z-10"
+                  // Changed object-cover to object-contain
+                  className="absolute inset-0 w-full h-full object-contain z-10 bg-muted" // Added bg-muted for letterboxing
               />
           )}
 
@@ -286,31 +367,49 @@ export function CaptureDrawing() {
         style={{ display: 'none' }} 
       />
 
-      <div className="flex gap-4 mt-4">
-         {capturedImage ? (
+      <div className="flex flex-col space-y-4">
+        <div className="flex justify-center space-x-4">
+          {capturedImage ? (
             <>
-                <Button variant="outline" onClick={retakePhoto} disabled={isConfirming} className="flex-1">
-                    <RefreshCcw className="mr-2 h-4 w-4" /> Retake
-                </Button>
-                <Button onClick={handleConfirmPhoto} disabled={isConfirming} className="flex-1">
-                    {isConfirming ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                        <Check className="mr-2 h-4 w-4" /> 
-                    )}
-                    {isConfirming ? 'Confirming...' : 'Confirm'}
-                </Button> 
+              <Button 
+                onClick={retakePhoto} 
+                variant="outline"
+                className="w-1/3 space-x-2"
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span>Retake</span>
+              </Button>
+              
+              {/* Rotate button */}
+              <Button 
+                onClick={rotateImage} 
+                variant="outline"
+                className="w-1/3 space-x-2"
+              >
+                <RotateCw className="w-4 h-4" />
+                <span>Rotate</span>
+              </Button>
+
+              <Button 
+                onClick={handleConfirmPhoto} 
+                variant="default"
+                className="w-1/3 space-x-2" 
+              >
+                <Check className="w-4 h-4" />
+                <span>Confirm</span>
+              </Button>
             </>
-         ) : (
+          ) : (
             <>
                 <Button variant="outline" onClick={triggerFileInput} className="flex-1"> 
-                    <Image className="mr-2 h-4 w-4" /> Gallery 
+                    <ImageIcon className="mr-2 h-4 w-4" /> Gallery 
                 </Button>
                 <Button disabled={!isCameraOn} onClick={capturePhoto} className="flex-1">
                     <Camera className="mr-2 h-4 w-4" /> Capture
                 </Button> 
             </>
          )}
+        </div>
       </div>
 
     </div>
