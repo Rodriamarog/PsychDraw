@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, ChevronRight, User, XIcon, CircleSlash } from 'lucide-react';
+import { Plus, ChevronRight, User, XIcon, Mars, Venus, Transgender } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { Search } from 'lucide-react';
 import { Card } from "@/components/ui/card";
@@ -340,8 +340,15 @@ export function ClientList() {
                         <div className="grid grid-cols-3 gap-3">
                           {(['Male', 'Female', 'Non-Binary'] as const).map((genderOption) => {
                             const isSelected = newClientGender === genderOption;
-                            // Choose icon based on gender
-                            const IconComponent = genderOption === 'Non-Binary' ? CircleSlash : User;
+                            // Update icon selection logic
+                            let IconComponent: React.ElementType;
+                            if (genderOption === 'Male') {
+                              IconComponent = Mars;
+                            } else if (genderOption === 'Female') {
+                              IconComponent = Venus;
+                            } else { // Non-Binary
+                              IconComponent = Transgender;
+                            }
                             return (
                               <Card 
                                 key={genderOption} 
@@ -352,7 +359,7 @@ export function ClientList() {
                                 }`}
                                 onClick={() => setNewClientGender(genderOption)}
                               >
-                                <IconComponent className={`h-6 w-6 mb-1 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
+                                <IconComponent className={`h-6 w-6 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
                                 <span className="text-xs text-center font-medium">{genderOption}</span>
                               </Card>
                             );

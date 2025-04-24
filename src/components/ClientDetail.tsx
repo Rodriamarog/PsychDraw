@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { supabase } from '@/lib/supabaseClient';
-import { ArrowLeft, FilePlus2, FileText, Home, TreeDeciduous, User, Users, ChevronRight, XIcon, ClipboardList, Loader2, ChevronLeft } from 'lucide-react'; // Icons
+import { ArrowLeft, FilePlus2, FileText, Home, TreeDeciduous, User, Users, ChevronRight, XIcon, ClipboardList, Loader2, ChevronLeft, Mars, Venus, Transgender, CloudHail, Component } from 'lucide-react'; // Icons
 import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
 import { Label } from "@/components/ui/label"; // Import Label
 import { Badge } from "@/components/ui/badge"; // Import Badge
@@ -13,8 +13,18 @@ import { Input } from "@/components/ui/input";
 import { motion, AnimatePresence } from 'framer-motion'; 
 // Import generated types
 import type { Database } from '@/lib/database.types';
-// Import CircleSlash for gender cards
-import { CircleSlash } from 'lucide-react';
+// Import AlertDialog components
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle, 
+  AlertDialogTrigger 
+} from "@/components/ui/alert-dialog";
 
 // Use generated types directly
 // Redefine ClientDetails to match the selected fields precisely
@@ -36,31 +46,25 @@ type DrawingType = Database['public']['Tables']['drawing_types']['Row'];
 
 // Helper function to get an icon based on drawing type name
 const getDrawingTypeIcon = (typeName: string): React.ElementType => {
-  // console.log("Mapping icon for type name:", typeName);
   const lowerCaseName = typeName.toLowerCase();
   let IconComponent: React.ElementType = FileText; // Default icon
 
+  // Order matters - check more specific terms first
   if (lowerCaseName.includes('house') && lowerCaseName.includes('tree') && lowerCaseName.includes('person')) {
     IconComponent = Home; 
-    // console.log("-> Matched HTP (Home)");
   } else if (lowerCaseName.includes('kinetic') && lowerCaseName.includes('family')) {
-    IconComponent = Users; // Use Users for KFD
-    // console.log("-> Matched KFD (Users)");
+    IconComponent = Component; // Changed to Component for KFD
+  } else if (lowerCaseName.includes('person') && lowerCaseName.includes('rain')) {
+    IconComponent = CloudHail; // Added specific icon for Person Under Rain
   } else if (lowerCaseName.includes('family')) {
     IconComponent = Users;
-    // console.log("-> Matched Family (Users)");
   } else if (lowerCaseName.includes('person')) {
-    // Catch DAP and Person Under Rain
+    // Catch DAP (Draw-A-Person) that doesn't include 'rain'
     IconComponent = User;
-    // console.log("-> Matched Person (User)");
   } else if (lowerCaseName.includes('tree')) {
     IconComponent = TreeDeciduous;
-    // console.log("-> Matched Tree (TreeDeciduous)");
   } else if (lowerCaseName.includes('house')) {
     IconComponent = Home;
-    // console.log("-> Matched House (Home)");
-  } else {
-    // console.log("-> No specific match, using default (FileText)");
   }
   
   return IconComponent; 
@@ -118,6 +122,8 @@ export function ClientDetail() {
   const [editClientGender, setEditClientGender] = useState<ClientDetails['gender'] | "">(null);
   const [isUpdatingClient, setIsUpdatingClient] = useState(false); // Loading state for update
   const [updateClientError, setUpdateClientError] = useState<string | null>(null); // Error state for update
+  // State for Delete Confirmation
+  const [isDeletingClient, setIsDeletingClient] = useState(false); // Loading state for delete
   
   // Pagination State
   const ITEMS_PER_PAGE = 5;
@@ -289,6 +295,79 @@ export function ClientDetail() {
     // setEditClientName("");
     // setEditClientAge("");
     // setEditClientGender(null);
+  };
+
+  // --- Handle Client Update --- 
+  const handleUpdateClient = async () => {
+    if (!client) return; // Should not happen
+
+    // Validation
+    if (!editClientName.trim()) {
+      setUpdateClientError("Client name cannot be empty.");
+      return;
+    }
+    const ageNum = editClientAge ? parseInt(editClientAge.toString(), 10) : null;
+    if (ageNum !== null && (isNaN(ageNum) || ageNum < 0 || ageNum > 120)) {
+        setUpdateClientError("Please enter a valid age between 0 and 120.");
+        return;
+    }
+
+    setIsUpdatingClient(true);
+    setUpdateClientError(null);
+
+    try {
+      const updateData = {
+        name: editClientName.trim(),
+        age: ageNum,
+        gender: editClientGender || null,
+        updated_at: new Date().toISOString(), // Explicitly set updated_at
+      };
+
+      const { error: updateError } = await supabase
+        .from('clients')
+        .update(updateData)
+        .eq('id', client.id);
+
+      if (updateError) throw updateError;
+
+      // Success! Update local state and close modal
+      setClient(prev => prev ? { ...prev, ...updateData } : null);
+      handleCloseEditModal();
+
+    } catch (err) {
+      console.error("Error updating client:", err);
+      setUpdateClientError(err instanceof Error ? err.message : 'Failed to update client');
+    } finally {
+      setIsUpdatingClient(false);
+    }
+  };
+
+  // --- Handle Client Delete --- 
+  const handleDeleteClient = async () => {
+    if (!client) return; 
+
+    setIsDeletingClient(true);
+    // No need for separate error state, can potentially reuse updateClientError or handle inline
+
+    try {
+      const { error: deleteError } = await supabase
+        .from('clients')
+        .delete()
+        .eq('id', client.id);
+
+      if (deleteError) throw deleteError;
+
+      // Success! Navigate back to the client list
+      navigate('/'); 
+      // No need to close modals manually, the component will unmount
+
+    } catch (err) {
+      console.error("Error deleting client:", err);
+      // Display error to user (e.g., using a toast notification or setting an error state)
+      setUpdateClientError(err instanceof Error ? err.message : 'Failed to delete client'); // Reuse error state for simplicity
+      setIsDeletingClient(false); // Ensure loading state is reset on error
+    } 
+    // No finally needed here as success leads to navigation
   };
 
   // --- Render Logic --- 
@@ -538,7 +617,15 @@ export function ClientDetail() {
                     <div className="grid grid-cols-3 gap-3">
                       {(['Male', 'Female', 'Non-Binary'] as const).map((genderOption) => {
                         const isSelected = editClientGender === genderOption;
-                        const IconComponent = genderOption === 'Non-Binary' ? CircleSlash : User;
+                        // Update icon selection logic
+                        let IconComponent: React.ElementType;
+                        if (genderOption === 'Male') {
+                          IconComponent = Mars;
+                        } else if (genderOption === 'Female') {
+                          IconComponent = Venus;
+                        } else { // Non-Binary
+                          IconComponent = Transgender;
+                        }
                         return (
                           <Card 
                             key={genderOption} 
@@ -547,7 +634,7 @@ export function ClientDetail() {
                             }`}
                             onClick={() => !isUpdatingClient && setEditClientGender(genderOption)} // Prevent change while updating
                           >
-                            <IconComponent className={`h-6 w-6 mb-1 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
+                            <IconComponent className={`h-6 w-6 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
                             <span className="text-xs text-center font-medium">{genderOption}</span>
                           </Card>
                         );
@@ -558,15 +645,50 @@ export function ClientDetail() {
                 </div>
 
                 {/* Footer */} 
-                <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end mt-4"> 
-                  <Button variant="outline" onClick={handleCloseEditModal} disabled={isUpdatingClient}>Cancel</Button>
-                  <Button 
-                    type="button"
-                    // onClick={handleUpdateClient} // Add this handler next
-                    disabled={isUpdatingClient || !editClientName.trim()} // Basic validation
-                  >
-                    {isUpdatingClient ? "Saving..." : "Save Changes"}
-                  </Button>
+                {/* Added justify-between for delete button placement */}
+                <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-between mt-4"> 
+                  {/* Delete Button wrapped in AlertDialog */}
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        variant="destructive"
+                        disabled={isUpdatingClient || isDeletingClient} // Disable if updating or deleting
+                      >
+                        Delete Client
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action cannot be undone. This will permanently delete the client 
+                          "{client?.name}" and all associated analysis data.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isDeletingClient}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction 
+                          onClick={handleDeleteClient}
+                          disabled={isDeletingClient}
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90" // Destructive style for action
+                        >
+                          {isDeletingClient ? "Deleting..." : "Yes, delete client"}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+
+                  {/* Right Aligned Buttons */} 
+                  <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                    <Button variant="outline" onClick={handleCloseEditModal} disabled={isUpdatingClient}>Cancel</Button>
+                    <Button 
+                      type="button"
+                      onClick={handleUpdateClient} 
+                      disabled={isUpdatingClient || !editClientName.trim()} 
+                    >
+                      {isUpdatingClient ? "Saving..." : "Save Changes"}
+                    </Button>
+                  </div>
                 </div>
               </Card>
             </motion.div>

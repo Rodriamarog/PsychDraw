@@ -81,7 +81,7 @@ function App() {
         // Wrap logged-in view with TooltipProvider
         <TooltipProvider delayDuration={100}> 
           <>
-            <header className="sticky top-0 z-10 flex justify-between items-center p-3 md:p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <header className="sticky top-0 z-10 flex justify-between items-center p-3 md:p-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
               {/* Removed the PsychDraw title span */}
               {/* Placeholder for potential future logo/branding if needed */}
               <div className="w-1/3"> {/* Add div to help balance flex layout */} </div> 

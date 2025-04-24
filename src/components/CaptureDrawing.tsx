@@ -240,10 +240,7 @@ export function CaptureDrawing() {
         <h2 className="text-xl font-semibold">Capture Drawing</h2>
       </div>
 
-      <p className="text-sm text-muted-foreground mb-1 text-center">Client ID: {clientId}</p>
-      <p className="text-sm text-muted-foreground mb-4 text-center">Drawing Type ID: {drawingTypeId}</p>
-
-      <div className="relative w-full max-w-md aspect-video bg-muted rounded-md overflow-hidden mb-4 border mx-auto">
+      <div className="relative w-full max-w-md aspect-[3/4] bg-muted rounded-md overflow-hidden mb-4 border mx-auto">
           {/* Error Display (always check first) */}
           {error && (
               <div className="absolute inset-0 flex items-center justify-center text-destructive text-center p-4 z-20 bg-background/80">
@@ -274,7 +271,7 @@ export function CaptureDrawing() {
           {/* Loading/Camera Off Indicator (Handles initial state) */}
           {!isCameraOn && !error && (
               <div className="absolute inset-0 flex flex-col items-center justify-center text-muted-foreground z-20 bg-background/80">
-                  <CameraOff className="h-16 w-16 mb-2" />
+                  <Loader2 className="h-12 w-12 mb-3 animate-spin" />
                   <p>Starting camera...</p>
               </div>
           )}
@@ -289,13 +286,13 @@ export function CaptureDrawing() {
         style={{ display: 'none' }} 
       />
 
-      <div className="flex justify-center gap-4 mt-4">
+      <div className="flex gap-4 mt-4">
          {capturedImage ? (
             <>
-                <Button variant="outline" onClick={retakePhoto} disabled={isConfirming}>
+                <Button variant="outline" onClick={retakePhoto} disabled={isConfirming} className="flex-1">
                     <RefreshCcw className="mr-2 h-4 w-4" /> Retake
                 </Button>
-                <Button size="lg" onClick={handleConfirmPhoto} disabled={isConfirming}>
+                <Button onClick={handleConfirmPhoto} disabled={isConfirming} className="flex-1">
                     {isConfirming ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
@@ -306,10 +303,10 @@ export function CaptureDrawing() {
             </>
          ) : (
             <>
-                <Button variant="outline" onClick={triggerFileInput}> 
+                <Button variant="outline" onClick={triggerFileInput} className="flex-1"> 
                     <Image className="mr-2 h-4 w-4" /> Gallery 
                 </Button>
-                <Button size="lg" disabled={!isCameraOn} onClick={capturePhoto}>
+                <Button disabled={!isCameraOn} onClick={capturePhoto} className="flex-1">
                     <Camera className="mr-2 h-4 w-4" /> Capture
                 </Button> 
             </>

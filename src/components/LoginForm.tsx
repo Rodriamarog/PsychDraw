@@ -53,8 +53,8 @@ export function LoginForm() {
         <Button
           onClick={handleGoogleSignIn}
           disabled={loading}
-          className="w-full bg-white text-gray-700 border border-gray-300 shadow-sm hover:bg-gray-50 disabled:opacity-60 dark:bg-background dark:text-foreground dark:border-border dark:hover:bg-muted/20"
-          variant="outline"
+          className="w-full border border-yellow-100 bg-yellow-100 text-gray-900 hover:bg-yellow-200/90 shadow-md focus-visible:ring-yellow-500 disabled:opacity-70"
+          variant="default"
         >
           <GoogleIcon />
           {loading ? 'Redirecting...' : 'Sign in with Google'}
