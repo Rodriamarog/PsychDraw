@@ -66,7 +66,7 @@ export function ClientList() {
 
       if (dbError) throw dbError;
       // Remove temporary type assertion
-      setClients(data || []); 
+      setClients(data || []);
     } catch (err) {
       console.error("Error fetching clients:", err);
       setError(err instanceof Error ? err.message : 'Failed to fetch clients');
@@ -91,7 +91,7 @@ export function ClientList() {
     // Refined validation check for non-null ageNum
     if (ageNum !== null && (isNaN(ageNum) || ageNum < 0 || ageNum > 120)) {
         setSaveError("Please enter a valid age between 0 and 120.");
-        return;
+      return;
     }
 
     setIsSaving(true);
@@ -208,10 +208,10 @@ export function ClientList() {
         {/* Show list or messages based on filtered results */} 
         {!loading && !error && (
           <> {/* Fragment to handle conditional rendering */} 
-            {clients.length === 0 ? (
+      {clients.length === 0 ? (
               <div className="text-center p-4 border border-dashed rounded-md mt-4"> 
-                You haven't added any clients yet.
-              </div>
+          You haven't added any clients yet.
+        </div>
             ) : filteredClients.length === 0 ? (
               <div className="text-center p-4 text-muted-foreground mt-4">
                 No clients match "{searchTerm}".
@@ -224,8 +224,8 @@ export function ClientList() {
                       whileTap={{ scale: 0.98 }} 
                       className="block" // Make div behave like a block element
                     >
-                      <Link 
-                        to={`/client/${client.id}`} 
+              <Link 
+                to={`/client/${client.id}`} 
                         // Use flex, padding, alignment, hover state on the link itself
                         className="flex items-center gap-3 transition-colors hover:bg-muted/50"
                       >
@@ -240,12 +240,12 @@ export function ClientList() {
                           {/* Placeholder for future secondary details */}
                           {/* <p className="text-xs text-muted-foreground">34 years old</p> */}
                         </div>
-                      </Link>
+              </Link>
                     </motion.div>
                   </Card>
-                ))}
+          ))}
               </div>
-            )}
+      )}
           </>
         )}
       </div>
@@ -258,7 +258,7 @@ export function ClientList() {
           onClick={() => setIsDialogOpen(true)} // Directly set state
         >
             <Plus className="h-4 w-4" /> Add New Client
-        </Button>
+              </Button>
       </motion.div>
 
       <AnimatePresence>
@@ -307,13 +307,13 @@ export function ClientList() {
                 <div className="grid gap-6 py-4"> {/* Changed gap-4 to gap-6 */} 
                     {/* Name Row */}
                     <div className="grid grid-cols-[auto_1fr] items-center gap-x-4">
-                        <Label htmlFor="name" className="text-right"> 
-                            Name
-                        </Label>
-                        <Input 
-                            id="name" 
-                            value={newClientName} 
-                            onChange={(e) => setNewClientName(e.target.value)}
+                      <Label htmlFor="name" className="text-right">
+                          Name
+                      </Label>
+                      <Input 
+                          id="name" 
+                          value={newClientName} 
+                          onChange={(e) => setNewClientName(e.target.value)}
                             placeholder="Client's name"
                             disabled={isSaving}
                         />
@@ -328,9 +328,9 @@ export function ClientList() {
                             type="number" 
                             value={newClientAge} 
                             onChange={(e) => setNewClientAge(e.target.value)}
-                            disabled={isSaving}
-                        />
-                    </div>
+                          disabled={isSaving}
+                      />
+                  </div>
                     {/* Gender Row - Label centered above cards */}
                     <div className="grid gap-2"> {/* Simplified outer grid row, adjust gap if needed */} 
                         <Label className="text-center mb-2"> {/* Centered label, added margin-bottom */} 
@@ -367,7 +367,7 @@ export function ClientList() {
                         </div>
                     </div>
                     {saveError && <p className="text-sm text-destructive text-center mt-2">{saveError}</p>} {/* Simplified error message positioning */} 
-                </div>
+              </div>
 
                 {/* Footer Content (Replicated from previous DialogFooter) */} 
                 <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end mt-4"> 
@@ -379,13 +379,13 @@ export function ClientList() {
                     >
                       Cancel
                     </Button>
-                    <Button 
+                  <Button 
                         type="button" 
-                        onClick={handleSaveClient} 
-                        disabled={isSaving || !newClientName.trim()}
-                    >
-                        {isSaving ? "Saving..." : "Save Client"}
-                    </Button>
+                      onClick={handleSaveClient} 
+                      disabled={isSaving || !newClientName.trim()}
+                  >
+                      {isSaving ? "Saving..." : "Save Client"}
+                  </Button>
                 </div>
               </Card>
             </motion.div>

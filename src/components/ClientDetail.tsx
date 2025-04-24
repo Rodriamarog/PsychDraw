@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -39,6 +39,9 @@ type ClientDetails = {
 type AnalysisQueryResult = (Database['public']['Tables']['drawing_analyses']['Row'] & {
   // Ensure Row includes temp_drawing_path and drawing_processed from the base type
   drawing_types: Pick<Database['public']['Tables']['drawing_types']['Row'], 'name'> | null;
+  // Add visual stage tracking
+  visual_stage?: 'analyzing' | 'generating' | 'finalizing' | 'complete' | null; 
+  backend_processed?: boolean; // Track actual backend status separately
 });
 
 // Use generated types for drawing types
@@ -142,6 +145,8 @@ export function ClientDetail() {
   const endIndex = startIndex + ITEMS_PER_PAGE;
   const paginatedAnalyses = analyses.slice(startIndex, endIndex);
 
+  const analysisTimers = useRef<{ [key: string]: NodeJS.Timeout[] }>({}); // Store timers per analysis ID
+
   // --- Data Fetching Effects --- (Basic implementations)
   useEffect(() => {
     const fetchClientData = async () => {
@@ -173,34 +178,35 @@ export function ClientDetail() {
     const fetchAnalyses = async () => {
         if (!clientId) return;
         setLoadingAnalyses(true);
-        setError(null); // Reset error specifically for this fetch
+        setError(null); 
         try {
-            // Query now uses generated types
             const { data, error: dbError } = await supabase
                 .from('drawing_analyses')
-                // Specify the foreign key constraint name for the join
                 .select(`
-                    id,
-                    analysis_date,
-                    title,
-                    temp_drawing_path,
-                    drawing_processed,
-                    raw_analysis,
-                    drawing_types!fk_drawing_type ( name ) 
+                    id, analysis_date, title, temp_drawing_path, 
+                    drawing_processed, raw_analysis, 
+                    drawing_types!fk_drawing_type ( name )
                 `)
                 .eq('client_id', clientId)
                 .order('analysis_date', { ascending: false })
-                .returns<AnalysisQueryResult[]>();
+                .returns<Omit<AnalysisQueryResult, 'visual_stage' | 'backend_processed'>[]>(); // Fetch base data
 
             if (dbError) throw dbError;
             
-            setAnalyses(data || []); 
+            // Initialize visual state for fetched analyses
+            const initializedAnalyses = (data || []).map(a => ({
+                ...a,
+                // Map null/false from DB to false, true to true
+                backend_processed: a.drawing_processed === true, 
+                // Explicitly cast the initial stage to the correct type
+                visual_stage: (a.drawing_processed ? 'complete' : 'analyzing') as AnalysisQueryResult['visual_stage'] 
+            }));
+            setAnalyses(initializedAnalyses);
 
         } catch (err) {
             console.error("Error fetching analyses:", err);
-            // Set a general error, or a specific one for analyses
             setError(err instanceof Error ? err.message : 'Failed to load analysis history');
-            setAnalyses([]); // Ensure analyses is empty on error
+            setAnalyses([]);
         } finally {
             setLoadingAnalyses(false);
         }
@@ -233,6 +239,107 @@ export function ClientDetail() {
     fetchDrawingTypes(); // Fetch types on component mount
 
   }, [clientId]);
+
+  // --- Realtime Subscription for Analysis Updates ---
+  useEffect(() => {
+    if (!clientId) return; // Don't subscribe without a client ID
+
+    // Define the channel specific to this client's analyses
+    const channel = supabase.channel(`analysis-updates-${clientId}`)
+      .on<
+        Database['public']['Tables']['drawing_analyses']['Row'] // Specify the payload type
+      >(
+        'postgres_changes',
+        { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'drawing_analyses', 
+          filter: `client_id=eq.${clientId}` // Filter for the current client
+        },
+        (payload) => {
+          console.log('Realtime update (backend processed):', payload.new.id, payload.new.drawing_processed);
+          // Mark backend as processed, but don't change visual stage here
+          setAnalyses(currentAnalyses => 
+            currentAnalyses.map(analysis => 
+              analysis.id === payload.new.id 
+                ? { ...analysis, backend_processed: payload.new.drawing_processed ?? analysis.backend_processed }
+                : analysis
+            )
+          );
+        }
+      )
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+          console.log(`Realtime channel subscribed for client ${clientId}`);
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          console.error('Realtime subscription error:', err);
+          // Optionally set an error state or notify the user
+        }
+      });
+
+    // Cleanup function to remove the channel subscription
+    return () => {
+      supabase.removeChannel(channel);
+      console.log(`Realtime channel unsubscribed for client ${clientId}`);
+    };
+
+  }, [clientId]); // Re-run effect if clientId changes
+
+  // --- Visual Stage Timer Logic ---
+  useEffect(() => {
+    analyses.forEach(analysis => {
+      if (analysis.visual_stage && analysis.visual_stage !== 'complete' && !analysisTimers.current[analysis.id]) {
+        // Clear any lingering timers for this ID just in case
+        if (analysisTimers.current[analysis.id]) {
+            analysisTimers.current[analysis.id].forEach(clearTimeout);
+        }
+        analysisTimers.current[analysis.id] = []; // Initialize timer array for this analysis
+        
+        console.log(`Starting visual timer sequence for ${analysis.id} at stage ${analysis.visual_stage}`);
+
+        let currentStage = analysis.visual_stage;
+
+        const scheduleNextStage = (stage: AnalysisQueryResult['visual_stage'], delay: number) => {
+          const timerId = setTimeout(() => {
+            // Only proceed if backend is actually done when reaching final visual stage
+            if (stage === 'complete' && !analysis.backend_processed) {
+              console.log(`Visual stage ${analysis.id} waiting for backend completion before marking complete.`);
+              // Re-schedule check for completion later? Or rely on backend_processed update? 
+              // For simplicity, let's just wait. The Realtime update effect will trigger re-render.
+              // We could potentially reschedule this check if needed:
+              // analysisTimers.current[analysis.id] = [scheduleNextStage('complete', 1000)]; // Check again in 1s
+              return; 
+            }
+            
+            console.log(`Updating visual stage for ${analysis.id} to ${stage}`);
+            setAnalyses(prev => prev.map(a => a.id === analysis.id ? { ...a, visual_stage: stage } : a));
+            // Remove this timer ID from the ref
+            analysisTimers.current[analysis.id] = analysisTimers.current[analysis.id]?.filter(id => id !== timerId) || [];
+            // Clean up ref entry if no more timers
+            if(analysisTimers.current[analysis.id].length === 0) {
+                delete analysisTimers.current[analysis.id];
+            }
+          }, delay);
+          analysisTimers.current[analysis.id].push(timerId);
+        };
+
+        // Start the sequence based on the current stage
+        if (currentStage === 'analyzing') {
+          scheduleNextStage('generating', 9000); // 9 seconds for analyzing
+        } else if (currentStage === 'generating') {
+          scheduleNextStage('finalizing', 3000); // 3 seconds for generating
+        } else if (currentStage === 'finalizing') {
+          scheduleNextStage('complete', 1000); // 1 second for finalizing
+        }
+      }
+    });
+
+    // Cleanup timers on unmount or if analyses array changes drastically
+    return () => {
+      Object.values(analysisTimers.current).forEach(timers => timers.forEach(clearTimeout));
+      analysisTimers.current = {};
+    };
+  }, [analyses]); // Rerun when analyses array changes (e.g., state updates)
 
   // --- Dialog form state reset --- 
   const handleModalClose = () => {
@@ -712,30 +819,59 @@ export function ClientDetail() {
           {loadingAnalyses ? (
             <p>Loading analysis history...</p> 
           ) : analyses.length > 0 ? (
-            <ul className="divide-y divide-border -mx-6 -my-4 relative min-h-[26rem]"> {/* Changed 20rem to 26rem */}
+            <ul className="divide-y divide-border -mx-6 -my-4 relative h-[23rem]"> {/* Changed 22rem to 23rem */}
               <AnimatePresence mode="wait">
                 {paginatedAnalyses.map((analysis) => {
-                  const showProcessedIcon = analysis.drawing_processed;
-                  const IconComponent = showProcessedIcon ? ClipboardList : Loader2;
+                  // Determine content based on visual stage or processed status
+                  const isProcessing = !analysis.drawing_processed;
+                  // Default to 'complete' if processed but stage isn't set yet
+                  const currentStage = analysis.visual_stage || (analysis.drawing_processed ? 'complete' : null);
+
+                  let stageText = 'Processing...';
+                  let showSpinner = isProcessing && currentStage !== 'complete';
+
+                  if (currentStage === 'analyzing') {
+                    stageText = 'Analyzing features...';
+                  } else if (currentStage === 'generating') {
+                    stageText = 'Generating interpretation...';
+                  } else if (currentStage === 'finalizing') {
+                    stageText = 'Finalizing report...';
+                  } else if (currentStage === 'complete') {
+                    showSpinner = false; // Ensure spinner is off for complete
+                  }
+                  
+                  const IconComponent = showSpinner ? Loader2 : ClipboardList; // Use spinner or final icon
 
                   const itemContent = (
                     <>
                       <IconComponent 
                         className={`h-5 w-5 mr-3 flex-shrink-0 ${ 
-                          showProcessedIcon 
-                            ? 'text-primary' 
-                            : 'text-muted-foreground animate-spin' 
+                          showSpinner 
+                            ? 'text-muted-foreground animate-spin' // Spinner style
+                            : 'text-primary' // Completed style
                         }`} 
                       />
                       <div className="flex-grow">
-                        <p className="font-medium text-sm">
-                          {analysis.drawing_types?.name || analysis.title || 'Analysis Details'}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {analysis.analysis_date ? new Date(analysis.analysis_date).toLocaleString() : 'Date unknown'}
-                        </p>
+                        {/* Show stage text or final details */} 
+                        {currentStage === 'complete' ? (
+                          <>
+                            <p className="font-medium text-sm">
+                              {analysis.drawing_types?.name || analysis.title || 'Analysis Details'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {analysis.analysis_date ? new Date(analysis.analysis_date).toLocaleString() : 'Date unknown'}
+                            </p>
+                          </>
+                        ) : (
+                          // Add placeholder paragraph for alignment
+                          <>
+                            <p className="font-medium text-sm text-muted-foreground">{stageText}</p>
+                            <p className="text-xs invisible" aria-hidden="true">&nbsp;</p> {/* Placeholder */} 
+                          </>
+                        )}
                       </div>
-                      {showProcessedIcon && <ChevronRight className="h-5 w-5 text-muted-foreground ml-auto" />}
+                      {/* Only show chevron if complete */}
+                      {currentStage === 'complete' && <ChevronRight className="h-5 w-5 text-muted-foreground ml-auto" />} 
                     </>
                   );
 
@@ -749,8 +885,9 @@ export function ClientDetail() {
                       exit={{ opacity: 0, y: -10 }}
                       transition={{ duration: 0.2 }}
                     >
-                      {showProcessedIcon ? (
-                         <Button asChild variant="ghost" className="w-full justify-start h-auto px-2 py-3">
+                      {/* Render Button/Link only when complete */} 
+                      {currentStage === 'complete' ? (
+                         <Button asChild variant="ghost" className="w-full justify-start h-auto px-2 py-2">
                            <Link 
                               to={`/analysis/${analysis.id}`}
                               className="flex items-center w-full transition-colors duration-150" 
@@ -759,7 +896,8 @@ export function ClientDetail() {
                             </Link>
                          </Button>
                       ) : (
-                        <div className="flex items-center w-full -mx-2 px-2 py-1 opacity-70 cursor-default"> 
+                        // Non-clickable div while processing
+                        <div className="flex items-center w-full -mx-2 px-2 py-2 opacity-70 cursor-default"> 
                           {itemContent}
                         </div>
                       )}
