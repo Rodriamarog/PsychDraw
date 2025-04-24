@@ -7,13 +7,24 @@ import { ArrowLeft, FilePlus2, FileText, Home, TreeDeciduous, User, Users, Chevr
 import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
 import { Label } from "@/components/ui/label"; // Import Label
 import { Badge } from "@/components/ui/badge"; // Import Badge
+// Import Input
+import { Input } from "@/components/ui/input";
 // Import motion and AnimatePresence
 import { motion, AnimatePresence } from 'framer-motion'; 
 // Import generated types
 import type { Database } from '@/lib/database.types';
+// Import CircleSlash for gender cards
+import { CircleSlash } from 'lucide-react';
 
 // Use generated types directly
-type ClientDetails = Database['public']['Tables']['clients']['Row'];
+// Redefine ClientDetails to match the selected fields precisely
+type ClientDetails = {
+  id: string;
+  name: string;
+  age: number | null;
+  gender: Database['public']['Enums']['gender_enum'] | null; // Use generated Enum type
+};
+
 // Define the shape for the analysis query result, including the joined type
 type AnalysisQueryResult = (Database['public']['Tables']['drawing_analyses']['Row'] & {
   // Ensure Row includes temp_drawing_path and drawing_processed from the base type
@@ -100,6 +111,13 @@ export function ClientDetail() {
   
   // State for New Analysis Dialog
   const [isAnalysisDialogOpen, setIsAnalysisDialogOpen] = useState(false);
+  // State for Edit Client Dialog
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editClientName, setEditClientName] = useState("");
+  const [editClientAge, setEditClientAge] = useState<string | number>(""); // Use string for input binding
+  const [editClientGender, setEditClientGender] = useState<ClientDetails['gender'] | "">(null);
+  const [isUpdatingClient, setIsUpdatingClient] = useState(false); // Loading state for update
+  const [updateClientError, setUpdateClientError] = useState<string | null>(null); // Error state for update
   
   // Pagination State
   const ITEMS_PER_PAGE = 5;
@@ -128,15 +146,15 @@ export function ClientDetail() {
             // Type safety from generated types!
             const { data, error } = await supabase
                 .from('clients')
-                .select('id, name') // Select specific fields needed
+                .select('id, name, age, gender') 
                 .eq('id', clientId)
-                .returns<Pick<ClientDetails, 'id' | 'name'> | null>() // Specify return type shape
+                .returns<ClientDetails | null>() // Use the redefined ClientDetails type
                 .single(); 
             
             if (error) throw error;
             if (!data) throw new Error("Client not found");
-            // We manually selected only id/name, so cast if needed or adjust select/return type
-            setClient(data as ClientDetails); // Assuming full row is needed later, else use Pick<...>
+            // Set the client state - type should now match
+            setClient(data);
         } catch (err) {
             console.error("Error fetching client details:", err);
             setError(err instanceof Error ? err.message : 'Failed to load client data');
@@ -254,6 +272,25 @@ export function ClientDetail() {
     // handleModalClose(); 
   };
 
+  // --- Edit Client Modal Open Handler --- 
+  const handleOpenEditModal = () => {
+    if (!client) return; // Should not happen if button is visible
+    setEditClientName(client.name);
+    setEditClientAge(client.age !== null && client.age !== undefined ? client.age.toString() : ""); // Initialize with current age or empty string
+    setEditClientGender(client.gender || null); // Initialize with current gender or null
+    setUpdateClientError(null); // Clear previous errors
+    setIsEditDialogOpen(true);
+  };
+
+  // --- Edit Client Modal Close Handler --- 
+  const handleCloseEditModal = () => {
+    setIsEditDialogOpen(false);
+    // Optionally reset edit state here, though initializing on open is often sufficient
+    // setEditClientName("");
+    // setEditClientAge("");
+    // setEditClientGender(null);
+  };
+
   // --- Render Logic --- 
 
   // Use Skeleton for initial client loading
@@ -287,14 +324,28 @@ export function ClientDetail() {
                     <span className="sr-only">Back to Clients</span>
                 </Link>
             </Button>
-            <h1 className="text-2xl font-bold tracking-tight">{client.name}</h1>
+            {/* Client Name and Details - Use flex for inline display */}
+            <div className="flex items-baseline gap-4"> {/* Changed items-center back to items-baseline */} 
+              <h1 className="text-2xl font-bold tracking-tight">{client.name}</h1>
+              {/* Conditionally render age and gender inline */}
+              {(client.age || client.gender) && ( 
+                <span className="text-sm text-muted-foreground">
+                  {/* Removed labels, show only values */} 
+                  {client.age}
+                  {client.age && client.gender && ', '}{/* Separator */} 
+                  {client.gender}
+                </span>
+              )}
+            </div>
         </div>
         {/* Apply v0 responsive classes and justification */}
         <div className="flex flex-col w-full gap-2 sm:flex-row sm:gap-3">
-            {/* Add justify-center and use sm breakpoint */}
+            {/* Edit Client Button - Add onClick handler */}
             <Button 
               variant="outline" 
               className="w-full sm:w-auto justify-center cursor-pointer"
+              onClick={handleOpenEditModal} // Add onClick to open modal
+              disabled={loadingClient || !client} // Disable if loading or no client
             >
               Edit Client
             </Button> 
@@ -415,6 +466,114 @@ export function ClientDetail() {
           )}
       </AnimatePresence>
 
+      {/* --- Edit Client Modal Implementation --- */} 
+      <AnimatePresence>
+        {isEditDialogOpen && (
+          <> {/* Fragment for overlay and modal */} 
+            {/* Overlay */} 
+            <motion.div
+              key="edit-client-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="fixed inset-0 bg-black/50 z-40" 
+              onClick={handleCloseEditModal} // Close on overlay click
+            />
+
+            {/* Modal Content Wrapper */} 
+            <motion.div
+              key="edit-client-content"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2, ease: "easeInOut" }}
+              className="fixed top-1/2 left-1/2 z-50 w-full max-w-[calc(100%-2rem)] sm:max-w-[525px] -translate-x-1/2 -translate-y-1/2" 
+            >
+              <Card className="relative p-6"> 
+                {/* Close Button */} 
+                <button
+                  onClick={handleCloseEditModal}
+                  className="absolute top-3 right-3 p-1 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                  aria-label="Close dialog"
+                >
+                  <XIcon className="h-5 w-5" />
+                </button>
+
+                {/* Header */} 
+                <div className="mb-4">
+                  <h2 className="text-lg font-semibold">Edit Client: {client?.name}</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Update the client's details below.
+                  </p>
+                </div>
+
+                {/* Form Content */} 
+                <div className="grid gap-6 py-4"> {/* Increased gap */} 
+                  {/* Name Row */}
+                  <div className="grid grid-cols-[auto_1fr] items-center gap-x-4">
+                    <Label htmlFor="edit-name" className="text-right">Name</Label>
+                    <Input 
+                      id="edit-name" 
+                      value={editClientName} 
+                      onChange={(e) => setEditClientName(e.target.value)}
+                      placeholder="Client's name"
+                      disabled={isUpdatingClient}
+                    />
+                  </div>
+                  {/* Age Row */} 
+                  <div className="grid grid-cols-[auto_1fr] items-center gap-x-6">
+                    <Label htmlFor="edit-age" className="text-right">Age</Label>
+                    <Input 
+                      id="edit-age"
+                      type="number"
+                      value={editClientAge}
+                      onChange={(e) => setEditClientAge(e.target.value)}
+                      disabled={isUpdatingClient}
+                    />
+                  </div>
+                  {/* Gender Row */} 
+                  <div className="grid gap-2">
+                    <Label className="text-center mb-2">Gender</Label>
+                    <div className="grid grid-cols-3 gap-3">
+                      {(['Male', 'Female', 'Non-Binary'] as const).map((genderOption) => {
+                        const isSelected = editClientGender === genderOption;
+                        const IconComponent = genderOption === 'Non-Binary' ? CircleSlash : User;
+                        return (
+                          <Card 
+                            key={genderOption} 
+                            className={`flex flex-col items-center justify-center p-3 cursor-pointer transition-colors duration-150 h-24 ${ 
+                              isSelected ? 'border-primary ring-2 ring-primary bg-muted' : 'border-border hover:bg-muted/50' 
+                            }`}
+                            onClick={() => !isUpdatingClient && setEditClientGender(genderOption)} // Prevent change while updating
+                          >
+                            <IconComponent className={`h-6 w-6 mb-1 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
+                            <span className="text-xs text-center font-medium">{genderOption}</span>
+                          </Card>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  {updateClientError && <p className="text-sm text-destructive text-center mt-2">{updateClientError}</p>} 
+                </div>
+
+                {/* Footer */} 
+                <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end mt-4"> 
+                  <Button variant="outline" onClick={handleCloseEditModal} disabled={isUpdatingClient}>Cancel</Button>
+                  <Button 
+                    type="button"
+                    // onClick={handleUpdateClient} // Add this handler next
+                    disabled={isUpdatingClient || !editClientName.trim()} // Basic validation
+                  >
+                    {isUpdatingClient ? "Saving..." : "Save Changes"}
+                  </Button>
+                </div>
+              </Card>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {/* Analysis History Section */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between"> {/* Added flex for badge positioning */}
@@ -431,7 +590,7 @@ export function ClientDetail() {
           {loadingAnalyses ? (
             <p>Loading analysis history...</p> 
           ) : analyses.length > 0 ? (
-            <ul className="divide-y divide-border -mx-6 -my-4 relative"> {/* Added relative positioning for potential absolute animation elements */}
+            <ul className="divide-y divide-border -mx-6 -my-4 relative min-h-[26rem]"> {/* Changed 20rem to 26rem */}
               <AnimatePresence mode="wait">
                 {paginatedAnalyses.map((analysis) => {
                   const showProcessedIcon = analysis.drawing_processed;

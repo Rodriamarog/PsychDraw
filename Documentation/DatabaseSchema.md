@@ -25,14 +25,22 @@ CREATE TABLE psychologists (
 );
 ```
 
+### -- New Type Definition for Gender --
+```sql
+-- Create the gender enum type before defining the clients table
+CREATE TYPE public.gender_enum AS ENUM ('Male', 'Female', 'Non-Binary');
+```
+
 ### 2. clients
-Table for storing client information.
+Table for storing client information, including age and gender.
 
 ```sql
 CREATE TABLE clients (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   psychologist_id UUID NOT NULL REFERENCES psychologists(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
+  age INT, -- Added age column
+  gender gender_enum, -- Added gender column using the enum type
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   is_active BOOLEAN DEFAULT TRUE,
@@ -374,7 +382,7 @@ export async function handler(event, context) {
    - Implement usage limits later
 
 7. **Future Extensions**: The schema allows for easy additions such as:
-   - Client demographic information
+   - Client demographic information (Age and Gender added!)
    - Dedicated subscription tables
    - Drawing categorization/tagging
    - More detailed report metadata
