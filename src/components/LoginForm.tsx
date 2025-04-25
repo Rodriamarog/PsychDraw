@@ -130,7 +130,7 @@ export function LoginForm() {
 
   return (
     // Use background from example
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4"> 
+    <div className="flex min-h-screen items-center justify-center p-4"> 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

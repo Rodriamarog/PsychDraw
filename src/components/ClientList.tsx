@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Search } from 'lucide-react';
 import { Card } from "@/components/ui/card";
 import { motion, AnimatePresence } from 'framer-motion';
+import { Textarea } from "@/components/ui/textarea";
 
 // Define a type for the client data we expect
 // Include optional age and gender AND psychologist_id
@@ -20,6 +21,7 @@ type Client = {
   name: string;
   age?: number | null; // Optional age
   gender?: 'Male' | 'Female' | 'Non-Binary' | null; // Optional gender enum
+  client_notes?: string | null; // Optional client notes
   // Add other fields from DB if needed for display/logic later, e.g., created_at, is_active
 };
 
@@ -46,6 +48,7 @@ export function ClientList() {
   const [newClientName, setNewClientName] = useState("");
   const [newClientAge, setNewClientAge] = useState(""); // Added state for age (string for input)
   const [newClientGender, setNewClientGender] = useState<Client['gender'] | "">(null); // Added state for gender
+  const [newClientNotes, setNewClientNotes] = useState(""); // Added state for notes
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -60,7 +63,7 @@ export function ClientList() {
     try {
       const { data, error: dbError } = await supabase
         .from('clients')
-        .select('id, name, age, gender, psychologist_id') // Select all needed fields
+        .select('id, name, age, gender, client_notes, psychologist_id') // Select client_notes field
         .eq('psychologist_id', user.id)
         .order('name');
 
@@ -104,7 +107,8 @@ export function ClientList() {
         name: newClientName.trim(),
         psychologist_id: user.id, 
         age: ageNum, // Use the parsed number or null
-        gender: newClientGender || null // Use state value or null
+        gender: newClientGender || null, // Use state value or null
+        client_notes: newClientNotes.trim() || null // Add client_notes, ensure it's null if empty
       };
 
       const { error: insertError } = await supabase
@@ -123,6 +127,9 @@ export function ClientList() {
 
       // Success!
       setNewClientName(""); // Reset input
+      setNewClientAge(""); // Reset age
+      setNewClientGender(null); // Reset gender
+      setNewClientNotes(""); // Reset notes
       setIsDialogOpen(false); // Close dialog
       await fetchClients(); // Refetch the client list to include the new one
 
@@ -141,6 +148,7 @@ export function ClientList() {
         setNewClientName("");
         setNewClientAge(""); // Reset age
         setNewClientGender(null); // Reset gender
+        setNewClientNotes(""); // Reset notes
         setSaveError(null);
     }
   }
@@ -295,16 +303,18 @@ export function ClientList() {
                     <XIcon className="h-5 w-5" />
                 </button>
 
-                {/* Header Content (Replicated from previous DialogHeader) */} 
-                <div className="mb-4">
+                {/* Header Content (Replicated from previous DialogHeader) */}
+                {/* Reduce bottom margin */} 
+                <div className="mb-2">
                   <h2 className="text-lg font-semibold">Add New Client</h2>
                   <p className="text-sm text-muted-foreground">
                       Enter the name for your new client.
                   </p>
                 </div>
 
-                {/* Form Content (Replicated from previous main div) */} 
-                <div className="grid gap-6 py-4"> {/* Changed gap-4 to gap-6 */} 
+                {/* Form Content (Replicated from previous main div) */}
+                {/* Add max-h and overflow-y-auto, add horizontal padding */}
+                <div className="grid gap-6 py-4 max-h-[65vh] overflow-y-auto px-4"> {/* Changed pr-2 to px-4 */}
                     {/* Name Row */}
                     <div className="grid grid-cols-[auto_1fr] items-center gap-x-4">
                       <Label htmlFor="name" className="text-right">
@@ -331,41 +341,55 @@ export function ClientList() {
                           disabled={isSaving}
                       />
                   </div>
-                    {/* Gender Row - Label centered above cards */}
-                    <div className="grid gap-2"> {/* Simplified outer grid row, adjust gap if needed */} 
-                        <Label className="text-center mb-2"> {/* Centered label, added margin-bottom */} 
-                            Gender
-                        </Label>
-                        {/* Grid for Gender Cards (stays the same) */}
-                        <div className="grid grid-cols-3 gap-3">
-                          {(['Male', 'Female', 'Non-Binary'] as const).map((genderOption) => {
-                            const isSelected = newClientGender === genderOption;
-                            // Update icon selection logic
-                            let IconComponent: React.ElementType;
-                            if (genderOption === 'Male') {
-                              IconComponent = Mars;
-                            } else if (genderOption === 'Female') {
-                              IconComponent = Venus;
-                            } else { // Non-Binary
-                              IconComponent = Transgender;
-                            }
-                            return (
-                              <Card 
-                                key={genderOption} 
-                                className={`flex flex-col items-center justify-center p-3 cursor-pointer transition-colors duration-150 h-24 ${ 
-                                    isSelected 
-                                        ? 'border-primary ring-2 ring-primary bg-muted' 
-                                        : 'border-border hover:bg-muted/50' 
-                                }`}
-                                onClick={() => setNewClientGender(genderOption)}
-                              >
-                                <IconComponent className={`h-6 w-6 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
-                                <span className="text-xs text-center font-medium">{genderOption}</span>
-                              </Card>
-                            );
-                          })}
-                        </div>
-                    </div>
+                  {/* Gender Row - Label centered above cards */}
+                  <div className="grid gap-2"> {/* Simplified outer grid row, adjust gap if needed */} 
+                      <Label className="text-center mb-2"> {/* Centered label, added margin-bottom */} 
+                          Gender
+                      </Label>
+                      {/* Grid for Gender Cards (stays the same) */}
+                      <div className="grid grid-cols-3 gap-3">
+                        {(['Male', 'Female', 'Non-Binary'] as const).map((genderOption) => {
+                          const isSelected = newClientGender === genderOption;
+                          // Update icon selection logic
+                          let IconComponent: React.ElementType;
+                          if (genderOption === 'Male') {
+                            IconComponent = Mars;
+                          } else if (genderOption === 'Female') {
+                            IconComponent = Venus;
+                          } else { // Non-Binary
+                            IconComponent = Transgender;
+                          }
+                          return (
+                            <Card 
+                              key={genderOption} 
+                              className={`flex flex-col items-center justify-center p-3 cursor-pointer transition-colors duration-150 h-24 ${ 
+                                  isSelected 
+                                      ? 'border-primary ring-2 ring-primary bg-muted' 
+                                      : 'border-border hover:bg-muted/50' 
+                              }`}
+                              onClick={() => setNewClientGender(genderOption)}
+                            >
+                              <IconComponent className={`h-6 w-6 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
+                              <span className="text-xs text-center font-medium">{genderOption}</span>
+                            </Card>
+                          );
+                        })}
+                      </div>
+                  </div>
+                  {/* Notes Row */}
+                  <div className="grid gap-2"> {/* Span across full width */}
+                      <Label htmlFor="notes">
+                          Notes <span className="text-xs text-muted-foreground">(Optional)</span>
+                      </Label>
+                      <Textarea
+                          id="notes"
+                          value={newClientNotes}
+                          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNewClientNotes(e.target.value)}
+                          placeholder="e.g., Reason for referral, initial observations, relevant history..."
+                          disabled={isSaving}
+                          className="min-h-[80px]" // Give it some minimum height
+                      />
+                  </div>
                     {saveError && <p className="text-sm text-destructive text-center mt-2">{saveError}</p>} {/* Simplified error message positioning */} 
               </div>
 

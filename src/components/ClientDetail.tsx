@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label"; // Import Label
 import { Badge } from "@/components/ui/badge"; // Import Badge
 // Import Input
 import { Input } from "@/components/ui/input";
+// Import Textarea
+import { Textarea } from "@/components/ui/textarea"; 
 // Import motion and AnimatePresence
 import { motion, AnimatePresence } from 'framer-motion'; 
 // Import generated types
@@ -33,6 +35,7 @@ type ClientDetails = {
   name: string;
   age: number | null;
   gender: Database['public']['Enums']['gender_enum'] | null; // Use generated Enum type
+  client_notes: string | null; // Add client_notes field
 };
 
 // Define the shape for the analysis query result, including the joined type
@@ -123,6 +126,7 @@ export function ClientDetail() {
   const [editClientName, setEditClientName] = useState("");
   const [editClientAge, setEditClientAge] = useState<string | number>(""); // Use string for input binding
   const [editClientGender, setEditClientGender] = useState<ClientDetails['gender'] | "">(null);
+  const [editClientNotes, setEditClientNotes] = useState<string>(""); // State for notes
   const [isUpdatingClient, setIsUpdatingClient] = useState(false); // Loading state for update
   const [updateClientError, setUpdateClientError] = useState<string | null>(null); // Error state for update
   // State for Delete Confirmation
@@ -157,7 +161,7 @@ export function ClientDetail() {
             // Type safety from generated types!
             const { data, error } = await supabase
                 .from('clients')
-                .select('id, name, age, gender') 
+                .select('id, name, age, gender, client_notes') // Add client_notes to select
                 .eq('id', clientId)
                 .returns<ClientDetails | null>() // Use the redefined ClientDetails type
                 .single(); 
@@ -391,6 +395,7 @@ export function ClientDetail() {
     setEditClientName(client.name);
     setEditClientAge(client.age !== null && client.age !== undefined ? client.age.toString() : ""); // Initialize with current age or empty string
     setEditClientGender(client.gender || null); // Initialize with current gender or null
+    setEditClientNotes(client.client_notes || ""); // Initialize with current client_notes or empty string
     setUpdateClientError(null); // Clear previous errors
     setIsEditDialogOpen(true);
   };
@@ -427,6 +432,7 @@ export function ClientDetail() {
         name: editClientName.trim(),
         age: ageNum,
         gender: editClientGender || null,
+        client_notes: editClientNotes.trim() || null, // Add client_notes, ensure it's null if empty
         updated_at: new Date().toISOString(), // Explicitly set updated_at
       };
 
@@ -687,15 +693,16 @@ export function ClientDetail() {
                 </button>
 
                 {/* Header */} 
-                <div className="mb-4">
+                <div className="mb-2">
                   <h2 className="text-lg font-semibold">Edit Client: {client?.name}</h2>
                   <p className="text-sm text-muted-foreground">
                     Update the client's details below.
                   </p>
                 </div>
 
-                {/* Form Content */} 
-                <div className="grid gap-6 py-4"> {/* Increased gap */} 
+                {/* Form Content */}
+                {/* Add max-h and overflow-y-auto, add horizontal padding */}
+                <div className="grid gap-6 py-4 max-h-[65vh] overflow-y-auto px-4"> {/* Changed pr-2 to px-4 */}
                   {/* Name Row */}
                   <div className="grid grid-cols-[auto_1fr] items-center gap-x-4">
                     <Label htmlFor="edit-name" className="text-right">Name</Label>
@@ -747,6 +754,20 @@ export function ClientDetail() {
                         );
                       })}
                     </div>
+                  </div>
+                  {/* Notes Row */}
+                  <div className="grid gap-2"> {/* Span full width */}
+                    <Label htmlFor="edit-notes">
+                      Notes <span className="text-xs text-muted-foreground">(Optional)</span>
+                    </Label>
+                    <Textarea
+                      id="edit-notes"
+                      value={editClientNotes}
+                      onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditClientNotes(e.target.value)} // Add type
+                      placeholder="e.g., Relevant background, ongoing concerns, therapeutic goals..."
+                      disabled={isUpdatingClient}
+                      className="min-h-[80px]" // Give it some minimum height
+                    />
                   </div>
                   {updateClientError && <p className="text-sm text-destructive text-center mt-2">{updateClientError}</p>} 
                 </div>
