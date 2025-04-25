@@ -208,3 +208,14 @@ Deno.serve(async (req)=>{
     });
   }
 });
+
+
+
+
+- I have to make a home page or user profile page or something
+- Make a prettier nav bar 
+- Deploy on cloudfare or somewhere with github actions 
+- Buy domain name 
+- Setup free trial
+- Setup billing 
+- Emails, app logo, google cloud app projet thing

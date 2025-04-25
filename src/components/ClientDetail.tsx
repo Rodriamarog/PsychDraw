@@ -521,7 +521,7 @@ export function ClientDetail() {
                 </Link>
             </Button>
             {/* Client Name and Details - Use flex for inline display */}
-            <div className="flex items-baseline gap-4"> {/* Changed items-center back to items-baseline */}
+            <div className="flex items-baseline gap-4"> {/* Changed items-center back to items-baseline */} 
               {/* Wrap Name and ID in a div for vertical stacking */}
               <div className="flex flex-col">
                 <h1 className="text-2xl font-bold tracking-tight leading-tight">{client.name}</h1>
@@ -711,7 +711,7 @@ export function ClientDetail() {
                   </p>
                 </div>
 
-                {/* Form Content */}
+                {/* Form Content */} 
                 {/* Add max-h and overflow-y-auto, add horizontal padding */}
                 <div className="grid gap-6 py-4 max-h-[65vh] overflow-y-auto px-4"> {/* Changed pr-2 to px-4 */}
                   {/* Name Row */}
@@ -864,7 +864,7 @@ export function ClientDetail() {
           {loadingAnalyses ? (
             <p>Loading analysis history...</p> 
           ) : analyses.length > 0 ? (
-            <ul className="divide-y divide-border -mx-6 -my-4 relative h-[23rem]"> {/* Changed 22rem to 23rem */}
+            <ul className="divide-y divide-border -mx-6 -my-4 relative h-[19rem] overflow-y-auto"> {/* Reduced from 23rem, added overflow-y-auto */}
               <AnimatePresence mode="wait">
                 {paginatedAnalyses.map((analysis) => {
                   // Determine content based on visual stage or processed status
@@ -890,7 +890,7 @@ export function ClientDetail() {
                 const itemContent = (
                   <>
                     <IconComponent 
-                      className={`h-5 w-5 mr-3 flex-shrink-0 ${ 
+                      className={`h-4 w-4 mr-2 flex-shrink-0 ${ 
                           showSpinner 
                             ? 'text-muted-foreground animate-spin' // Spinner style
                             : 'text-primary' // Completed style
@@ -900,7 +900,7 @@ export function ClientDetail() {
                         {/* Show stage text or final details */} 
                         {currentStage === 'complete' ? (
                           <>
-                      <p className="font-medium text-sm">
+                      <p className="font-medium text-sm leading-tight">
                         {analysis.drawing_types?.name || analysis.title || 'Analysis Details'}
                       </p>
                       <p className="text-xs text-muted-foreground">
@@ -910,13 +910,14 @@ export function ClientDetail() {
                         ) : (
                           // Add placeholder paragraph for alignment
                           <>
+                            {/* Restore font size for stage text */}
                             <p className="font-medium text-sm text-muted-foreground">{stageText}</p>
                             <p className="text-xs invisible" aria-hidden="true">&nbsp;</p> {/* Placeholder */} 
                           </>
                         )}
                     </div>
                       {/* Only show chevron if complete */}
-                      {currentStage === 'complete' && <ChevronRight className="h-5 w-5 text-muted-foreground ml-auto" />} 
+                      {currentStage === 'complete' && <ChevronRight className="h-4 w-4 text-muted-foreground ml-auto" />} 
                   </>
                 );
 
@@ -924,7 +925,7 @@ export function ClientDetail() {
                 return (
                     <motion.li 
                       key={analysis.id} // Key is crucial for AnimatePresence
-                      className="px-6 py-3 first:pt-0 last:pb-0" 
+                      className="px-6 py-[0.375rem] first:pt-0 last:pb-0" 
                       initial={{ opacity: 0, y: 10 }} 
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}

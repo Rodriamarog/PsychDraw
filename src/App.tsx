@@ -7,13 +7,15 @@ import { supabase } from "@/lib/supabaseClient"
 import { ClientList } from "@/components/ClientList"
 import { Routes, Route, Navigate, useLocation } from "react-router-dom"; // Import routing components and useLocation
 import { motion, AnimatePresence } from "framer-motion"; // Import framer-motion
-import { LogOut } from 'lucide-react'; // Import LogOut icon
+import { LogOut } from 'lucide-react'; // Import LogOut icon ONLY
 import { 
   Tooltip, 
   TooltipContent, 
   TooltipProvider, 
   TooltipTrigger 
 } from "@/components/ui/tooltip"; // Import Tooltip components
+// Import BottomNav
+import BottomNav from '@/components/BottomNav';
 // Lazy load ClientDetail
 const ClientDetail = lazy(() => 
   import('@/components/ClientDetail').then(module => ({ default: module.ClientDetail }))
@@ -25,6 +27,10 @@ const CaptureDrawing = lazy(() =>
 // Lazy load AnalysisDetail
 const AnalysisDetail = lazy(() => 
   import('@/components/AnalysisDetail').then(module => ({ default: module.AnalysisDetail }))
+);
+// Lazy load SettingsPage
+const SettingsPage = lazy(() =>
+  import('@/components/SettingsPage').then(module => ({ default: module.SettingsPage }))
 );
 // import { ClientDetail } from "@/components/ClientDetail"; // We'll create this next
 
@@ -84,10 +90,10 @@ function App() {
             <header className="sticky top-0 z-10 flex justify-between items-center p-3 md:p-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
               {/* Removed the PsychDraw title span */}
               {/* Placeholder for potential future logo/branding if needed */}
-              <div className="w-1/3"> {/* Add div to help balance flex layout */} </div> 
+              <div className="w-1/3"></div> 
               
-              {/* Centered element placeholder if needed */}
-              <div className="w-1/3 text-center"></div>
+              {/* Removed Centered Navigation Icons */}
+              <div className="flex-grow"></div> {/* Keep a flex-grow div for centering if needed later, or remove */} 
 
               {/* Logout Button pushed to the right */}
               <div className="w-1/3 flex justify-end">
@@ -109,7 +115,8 @@ function App() {
                 </Tooltip>
               </div>
             </header>
-            <main className="flex-grow p-4 md:p-6">
+            {/* Add specific bottom padding for mobile to account for BottomNav */}
+            <main className="flex-grow p-4 pb-20 md:p-6 md:pb-6">
               {/* AnimatePresence manages exit/enter animations */}
               <AnimatePresence mode="wait">
                 <Suspense fallback={<RouteLoadingFallback />}>
@@ -171,11 +178,27 @@ function App() {
                         </motion.div>
                       } 
                     />
+                    <Route 
+                      path="/settings"
+                      element={
+                        <motion.div
+                          initial="initial"
+                          animate="in"
+                          exit="out"
+                          variants={pageVariants}
+                          transition={pageTransition}
+                        >
+                          <SettingsPage />
+                        </motion.div>
+                      }
+                    />
                     <Route path="*" element={<Navigate to="/" replace />} /> 
                   </Routes>
                 </Suspense>
               </AnimatePresence>
             </main>
+            {/* Render BottomNav here */}
+            <BottomNav /> 
           </>
         </TooltipProvider>
       ) : (

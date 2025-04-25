@@ -318,7 +318,7 @@ export function ClientList() {
                     <XIcon className="h-5 w-5" />
                 </button>
 
-                {/* Header Content (Replicated from previous DialogHeader) */}
+                {/* Header Content (Replicated from previous DialogHeader) */} 
                 {/* Reduce bottom margin */} 
                 <div className="mb-2">
                   <h2 className="text-lg font-semibold">Add New Client</h2>
@@ -327,7 +327,7 @@ export function ClientList() {
                   </p>
                 </div>
 
-                {/* Form Content (Replicated from previous main div) */}
+                {/* Form Content (Replicated from previous main div) */} 
                 {/* Add max-h and overflow-y-auto, add horizontal padding */}
                 <div className="grid gap-6 py-4 max-h-[65vh] overflow-y-auto px-4"> {/* Changed pr-2 to px-4 */}
                     {/* Name Row */}
@@ -354,8 +354,8 @@ export function ClientList() {
                             type="number" 
                             value={newClientAge} 
                             onChange={(e) => setNewClientAge(e.target.value)}
-                            disabled={isSaving}
-                        />
+                          disabled={isSaving}
+                      />
                         {/* Identifier */}
                         <Label htmlFor="client-id" className="text-right whitespace-nowrap">
                           Client ID <span className="text-xs text-muted-foreground">(Optional)</span>
@@ -368,7 +368,7 @@ export function ClientList() {
                             placeholder="AB123" // Simplified placeholder further
                             disabled={isSaving}
                         />
-                    </div>
+                  </div>
                     {/* Gender Row - Label centered above cards */}
                     <div className="grid gap-2"> {/* Simplified outer grid row, adjust gap if needed */} 
                         <Label className="text-center mb-2"> {/* Centered label, added margin-bottom */} 
@@ -418,8 +418,8 @@ export function ClientList() {
                             className="min-h-[80px]" // Give it some minimum height
                         />
                     </div>
-                      {saveError && <p className="text-sm text-destructive text-center mt-2">{saveError}</p>} {/* Simplified error message positioning */} 
-                </div>
+                    {saveError && <p className="text-sm text-destructive text-center mt-2">{saveError}</p>} {/* Simplified error message positioning */} 
+              </div>
 
                 {/* Footer Content (Replicated from previous DialogFooter) */} 
                 <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end mt-4"> 
