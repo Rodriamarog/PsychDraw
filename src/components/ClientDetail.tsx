@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { supabase } from '@/lib/supabaseClient';
-import { ArrowLeft, FilePlus2, FileText, Home, TreeDeciduous, User, Users, ChevronRight, XIcon, ClipboardList, Loader2, ChevronLeft, Mars, Venus, Transgender, CloudHail, Component } from 'lucide-react'; // Icons
+import { ArrowLeft, FilePlus2, FileText, Home, TreeDeciduous, User, Users, ChevronRight, XIcon, ClipboardList, Loader2, ChevronLeft, Mars, Venus, Transgender, CloudHail, Component, Info } from 'lucide-react'; // Icons
 import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
 import { Label } from "@/components/ui/label"; // Import Label
 import { Badge } from "@/components/ui/badge"; // Import Badge
@@ -36,6 +36,7 @@ type ClientDetails = {
   age: number | null;
   gender: Database['public']['Enums']['gender_enum'] | null; // Use generated Enum type
   client_notes: string | null; // Add client_notes field
+  client_identifier: string | null; // Add identifier
 };
 
 // Define the shape for the analysis query result, including the joined type
@@ -127,6 +128,7 @@ export function ClientDetail() {
   const [editClientAge, setEditClientAge] = useState<string | number>(""); // Use string for input binding
   const [editClientGender, setEditClientGender] = useState<ClientDetails['gender'] | "">(null);
   const [editClientNotes, setEditClientNotes] = useState<string>(""); // State for notes
+  const [editClientIdentifier, setEditClientIdentifier] = useState<string>(""); // State for identifier
   const [isUpdatingClient, setIsUpdatingClient] = useState(false); // Loading state for update
   const [updateClientError, setUpdateClientError] = useState<string | null>(null); // Error state for update
   // State for Delete Confirmation
@@ -161,7 +163,7 @@ export function ClientDetail() {
             // Type safety from generated types!
             const { data, error } = await supabase
                 .from('clients')
-                .select('id, name, age, gender, client_notes') // Add client_notes to select
+                .select('id, name, age, gender, client_notes, client_identifier') // Add client_identifier to select
                 .eq('id', clientId)
                 .returns<ClientDetails | null>() // Use the redefined ClientDetails type
                 .single(); 
@@ -396,6 +398,7 @@ export function ClientDetail() {
     setEditClientAge(client.age !== null && client.age !== undefined ? client.age.toString() : ""); // Initialize with current age or empty string
     setEditClientGender(client.gender || null); // Initialize with current gender or null
     setEditClientNotes(client.client_notes || ""); // Initialize with current client_notes or empty string
+    setEditClientIdentifier(client.client_identifier || ""); // Initialize with current identifier or empty string
     setUpdateClientError(null); // Clear previous errors
     setIsEditDialogOpen(true);
   };
@@ -433,6 +436,7 @@ export function ClientDetail() {
         age: ageNum,
         gender: editClientGender || null,
         client_notes: editClientNotes.trim() || null, // Add client_notes, ensure it's null if empty
+        client_identifier: editClientIdentifier.trim() || null, // Add identifier, ensure it's null if empty
         updated_at: new Date().toISOString(), // Explicitly set updated_at
       };
 
@@ -517,8 +521,15 @@ export function ClientDetail() {
                 </Link>
             </Button>
             {/* Client Name and Details - Use flex for inline display */}
-            <div className="flex items-baseline gap-4"> {/* Changed items-center back to items-baseline */} 
-            <h1 className="text-2xl font-bold tracking-tight">{client.name}</h1>
+            <div className="flex items-baseline gap-4"> {/* Changed items-center back to items-baseline */}
+              {/* Wrap Name and ID in a div for vertical stacking */}
+              <div className="flex flex-col">
+                <h1 className="text-2xl font-bold tracking-tight leading-tight">{client.name}</h1>
+                {/* Conditionally display identifier below name */}
+                {client.client_identifier && (
+                  <p className="text-sm text-muted-foreground">ID: {client.client_identifier}</p>
+                )}
+              </div>
               {/* Conditionally render age and gender inline */}
               {(client.age || client.gender) && ( 
                 <span className="text-sm text-muted-foreground">
@@ -714,14 +725,27 @@ export function ClientDetail() {
                       disabled={isUpdatingClient}
                     />
                   </div>
-                  {/* Age Row */} 
-                  <div className="grid grid-cols-[auto_1fr] items-center gap-x-6">
+                  {/* Age and Identifier Row - Combined */}
+                  <div className="grid grid-cols-[auto_minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-4 gap-y-2">
+                    {/* Age */}
                     <Label htmlFor="edit-age" className="text-right">Age</Label>
                     <Input 
                       id="edit-age"
                       type="number"
                       value={editClientAge}
                       onChange={(e) => setEditClientAge(e.target.value)}
+                      disabled={isUpdatingClient}
+                    />
+                    {/* Identifier */}
+                    <Label htmlFor="edit-client-id" className="text-right whitespace-nowrap">
+                      Client ID <span className="text-xs text-muted-foreground">(Optional)</span>
+                    </Label>
+                    <Input 
+                      id="edit-client-id"
+                      type="text"
+                      value={editClientIdentifier}
+                      onChange={(e) => setEditClientIdentifier(e.target.value)}
+                      placeholder="AB123" // Simplified placeholder further
                       disabled={isUpdatingClient}
                     />
                   </div>

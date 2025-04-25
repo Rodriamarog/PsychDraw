@@ -22,6 +22,7 @@ type Client = {
   age?: number | null; // Optional age
   gender?: 'Male' | 'Female' | 'Non-Binary' | null; // Optional gender enum
   client_notes?: string | null; // Optional client notes
+  client_identifier?: string | null; // Optional identifier
   // Add other fields from DB if needed for display/logic later, e.g., created_at, is_active
 };
 
@@ -49,6 +50,7 @@ export function ClientList() {
   const [newClientAge, setNewClientAge] = useState(""); // Added state for age (string for input)
   const [newClientGender, setNewClientGender] = useState<Client['gender'] | "">(null); // Added state for gender
   const [newClientNotes, setNewClientNotes] = useState(""); // Added state for notes
+  const [newClientIdentifier, setNewClientIdentifier] = useState(""); // Added state for identifier
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -63,7 +65,7 @@ export function ClientList() {
     try {
       const { data, error: dbError } = await supabase
         .from('clients')
-        .select('id, name, age, gender, client_notes, psychologist_id') // Select client_notes field
+        .select('id, name, age, gender, client_notes, client_identifier, psychologist_id') // Select client_identifier field
         .eq('psychologist_id', user.id)
         .order('name');
 
@@ -108,7 +110,8 @@ export function ClientList() {
         psychologist_id: user.id, 
         age: ageNum, // Use the parsed number or null
         gender: newClientGender || null, // Use state value or null
-        client_notes: newClientNotes.trim() || null // Add client_notes, ensure it's null if empty
+        client_notes: newClientNotes.trim() || null, // Add client_notes, ensure it's null if empty
+        client_identifier: newClientIdentifier.trim() || null, // Add identifier, ensure it's null if empty
       };
 
       const { error: insertError } = await supabase
@@ -130,6 +133,7 @@ export function ClientList() {
       setNewClientAge(""); // Reset age
       setNewClientGender(null); // Reset gender
       setNewClientNotes(""); // Reset notes
+      setNewClientIdentifier(""); // Reset identifier
       setIsDialogOpen(false); // Close dialog
       await fetchClients(); // Refetch the client list to include the new one
 
@@ -149,14 +153,19 @@ export function ClientList() {
         setNewClientAge(""); // Reset age
         setNewClientGender(null); // Reset gender
         setNewClientNotes(""); // Reset notes
+        setNewClientIdentifier(""); // Reset identifier
         setSaveError(null);
     }
   }
 
   // --- Filtering Logic --- 
-  const filteredClients = clients.filter(client => 
-    client.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredClients = clients.filter(client => { 
+    const lowerSearchTerm = searchTerm.toLowerCase();
+    const nameMatch = client.name.toLowerCase().includes(lowerSearchTerm);
+    // Check identifier safely, converting null/undefined to empty string for search
+    const identifierMatch = (client.client_identifier ?? '').toLowerCase().includes(lowerSearchTerm);
+    return nameMatch || identifierMatch; // Return true if either matches
+  });
 
   // --- Rendering Logic --- 
 
@@ -242,11 +251,17 @@ export function ClientList() {
                           <User className="h-5 w-5 text-muted-foreground" /> 
                         </div>
                         
-                        {/* Center Content (Name) - Grow to take space */}
+                        {/* Center Content (Name & ID) - Grow to take space */}
                         <div className="flex-grow">
-                          <p className="font-medium text-base">{client.name}</p>
-                          {/* Placeholder for future secondary details */}
-                          {/* <p className="text-xs text-muted-foreground">34 years old</p> */}
+                          {/* Display Name and ID inline */}
+                          <p className="font-medium text-base leading-tight">
+                            {client.name}
+                            {/* Conditionally display identifier next to name, without parentheses */}
+                            {client.client_identifier && (
+                              <span className="ml-2 text-sm text-muted-foreground">{client.client_identifier}</span>
+                            )}
+                          </p>
+                          {/* Conditional display removed from below */}
                         </div>
               </Link>
                     </motion.div>
@@ -328,8 +343,9 @@ export function ClientList() {
                             disabled={isSaving}
                         />
                     </div>
-                    {/* Age Row */}
-                    <div className="grid grid-cols-[auto_1fr] items-center gap-x-6">
+                    {/* Age and Identifier Row - Combined */}
+                    <div className="grid grid-cols-[auto_minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-x-4 gap-y-2"> 
+                        {/* Age */}
                         <Label htmlFor="age" className="text-right">
                             Age
                         </Label>
@@ -338,60 +354,72 @@ export function ClientList() {
                             type="number" 
                             value={newClientAge} 
                             onChange={(e) => setNewClientAge(e.target.value)}
-                          disabled={isSaving}
-                      />
-                  </div>
-                  {/* Gender Row - Label centered above cards */}
-                  <div className="grid gap-2"> {/* Simplified outer grid row, adjust gap if needed */} 
-                      <Label className="text-center mb-2"> {/* Centered label, added margin-bottom */} 
-                          Gender
-                      </Label>
-                      {/* Grid for Gender Cards (stays the same) */}
-                      <div className="grid grid-cols-3 gap-3">
-                        {(['Male', 'Female', 'Non-Binary'] as const).map((genderOption) => {
-                          const isSelected = newClientGender === genderOption;
-                          // Update icon selection logic
-                          let IconComponent: React.ElementType;
-                          if (genderOption === 'Male') {
-                            IconComponent = Mars;
-                          } else if (genderOption === 'Female') {
-                            IconComponent = Venus;
-                          } else { // Non-Binary
-                            IconComponent = Transgender;
-                          }
-                          return (
-                            <Card 
-                              key={genderOption} 
-                              className={`flex flex-col items-center justify-center p-3 cursor-pointer transition-colors duration-150 h-24 ${ 
-                                  isSelected 
-                                      ? 'border-primary ring-2 ring-primary bg-muted' 
-                                      : 'border-border hover:bg-muted/50' 
-                              }`}
-                              onClick={() => setNewClientGender(genderOption)}
-                            >
-                              <IconComponent className={`h-6 w-6 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
-                              <span className="text-xs text-center font-medium">{genderOption}</span>
-                            </Card>
-                          );
-                        })}
-                      </div>
-                  </div>
-                  {/* Notes Row */}
-                  <div className="grid gap-2"> {/* Span across full width */}
-                      <Label htmlFor="notes">
-                          Notes <span className="text-xs text-muted-foreground">(Optional)</span>
-                      </Label>
-                      <Textarea
-                          id="notes"
-                          value={newClientNotes}
-                          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNewClientNotes(e.target.value)}
-                          placeholder="e.g., Reason for referral, initial observations, relevant history..."
-                          disabled={isSaving}
-                          className="min-h-[80px]" // Give it some minimum height
-                      />
-                  </div>
-                    {saveError && <p className="text-sm text-destructive text-center mt-2">{saveError}</p>} {/* Simplified error message positioning */} 
-              </div>
+                            disabled={isSaving}
+                        />
+                        {/* Identifier */}
+                        <Label htmlFor="client-id" className="text-right whitespace-nowrap">
+                          Client ID <span className="text-xs text-muted-foreground">(Optional)</span>
+                        </Label>
+                        <Input 
+                            id="client-id"
+                            type="text" 
+                            value={newClientIdentifier} 
+                            onChange={(e) => setNewClientIdentifier(e.target.value)}
+                            placeholder="AB123" // Simplified placeholder further
+                            disabled={isSaving}
+                        />
+                    </div>
+                    {/* Gender Row - Label centered above cards */}
+                    <div className="grid gap-2"> {/* Simplified outer grid row, adjust gap if needed */} 
+                        <Label className="text-center mb-2"> {/* Centered label, added margin-bottom */} 
+                            Gender
+                        </Label>
+                        {/* Grid for Gender Cards (stays the same) */}
+                        <div className="grid grid-cols-3 gap-3">
+                          {(['Male', 'Female', 'Non-Binary'] as const).map((genderOption) => {
+                            const isSelected = newClientGender === genderOption;
+                            // Update icon selection logic
+                            let IconComponent: React.ElementType;
+                            if (genderOption === 'Male') {
+                              IconComponent = Mars;
+                            } else if (genderOption === 'Female') {
+                              IconComponent = Venus;
+                            } else { // Non-Binary
+                              IconComponent = Transgender;
+                            }
+                            return (
+                              <Card 
+                                key={genderOption} 
+                                className={`flex flex-col items-center justify-center p-3 cursor-pointer transition-colors duration-150 h-24 ${ 
+                                    isSelected 
+                                        ? 'border-primary ring-2 ring-primary bg-muted' 
+                                        : 'border-border hover:bg-muted/50' 
+                                }`}
+                                onClick={() => setNewClientGender(genderOption)}
+                              >
+                                <IconComponent className={`h-6 w-6 ${isSelected ? 'text-primary' : 'text-muted-foreground'}`} />
+                                <span className="text-xs text-center font-medium">{genderOption}</span>
+                              </Card>
+                            );
+                          })}
+                        </div>
+                    </div>
+                    {/* Notes Row */}
+                    <div className="grid gap-2"> {/* Span across full width */}
+                        <Label htmlFor="notes">
+                            Notes <span className="text-xs text-muted-foreground">(Optional)</span>
+                        </Label>
+                        <Textarea
+                            id="notes"
+                            value={newClientNotes}
+                            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNewClientNotes(e.target.value)}
+                            placeholder="e.g., Reason for referral, initial observations, relevant history..."
+                            disabled={isSaving}
+                            className="min-h-[80px]" // Give it some minimum height
+                        />
+                    </div>
+                      {saveError && <p className="text-sm text-destructive text-center mt-2">{saveError}</p>} {/* Simplified error message positioning */} 
+                </div>
 
                 {/* Footer Content (Replicated from previous DialogFooter) */} 
                 <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end mt-4"> 

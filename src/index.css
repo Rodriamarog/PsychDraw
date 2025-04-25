@@ -121,3 +121,16 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
+
+/* Custom styles added by AI */
+
+/* Hide spinner buttons for number inputs */
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type=number] {
+  -moz-appearance: textfield;
+}
