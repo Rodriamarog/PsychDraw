@@ -375,6 +375,7 @@ export function CaptureDrawing() {
                 onClick={retakePhoto} 
                 variant="outline"
                 className="w-1/3 space-x-2"
+                disabled={isConfirming}
               >
                 <RefreshCw className="w-4 h-4" />
                 <span>Retake</span>
@@ -385,6 +386,7 @@ export function CaptureDrawing() {
                 onClick={rotateImage} 
                 variant="outline"
                 className="w-1/3 space-x-2"
+                disabled={isConfirming}
               >
                 <RotateCw className="w-4 h-4" />
                 <span>Rotate</span>
@@ -394,9 +396,14 @@ export function CaptureDrawing() {
                 onClick={handleConfirmPhoto} 
                 variant="default"
                 className="w-1/3 space-x-2" 
+                disabled={isConfirming}
               >
-                <Check className="w-4 h-4" />
-                <span>Confirm</span>
+                {isConfirming ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" /> 
+                ) : (
+                  <Check className="w-4 h-4" />
+                )}
+                <span>{isConfirming ? 'Confirming...' : 'Confirm'}</span>
               </Button>
             </>
           ) : (
