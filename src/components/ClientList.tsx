@@ -206,7 +206,7 @@ export function ClientList() {
     <div className="flex flex-col h-full max-w-lg mx-auto p-4"> 
       {/* Header: Title and Badge */}
       <div className="flex justify-between items-center mb-4"> {/* Reduced margin-bottom */}
-          <h2 className="text-2xl font-bold">Your Clients</h2> {/* Use font-bold */}
+          <h1 className="text-3xl font-bold tracking-tight">Your Clients</h1> 
           {/* Show badge only if not loading and there are clients */} 
           {!loading && clients.length > 0 && (
             <Badge variant="secondary">{clients.length} Total</Badge>

@@ -3,19 +3,21 @@ import { lazy, Suspense } from 'react'; // Import lazy and Suspense
 import { LoginForm } from "@/components/LoginForm"
 import { useAuth } from "@/contexts/AuthContext"
 import { Button } from "@/components/ui/button"
-import { supabase } from "@/lib/supabaseClient"
+// import { supabase } from "@/lib/supabaseClient"
 import { ClientList } from "@/components/ClientList"
 import { Routes, Route, Navigate, useLocation } from "react-router-dom"; // Import routing components and useLocation
 import { motion, AnimatePresence } from "framer-motion"; // Import framer-motion
-import { LogOut } from 'lucide-react'; // Import LogOut icon ONLY
-import { 
-  Tooltip, 
-  TooltipContent, 
-  TooltipProvider, 
-  TooltipTrigger 
-} from "@/components/ui/tooltip"; // Import Tooltip components
+// import { LogOut } from 'lucide-react'; // Import LogOut icon ONLY
+// import { 
+//   Tooltip, 
+//   TooltipContent, 
+//   TooltipProvider, 
+//   TooltipTrigger 
+// } from "@/components/ui/tooltip"; // Import Tooltip components
 // Import BottomNav
 import BottomNav from '@/components/BottomNav';
+// Import SidebarNav
+import SidebarNav from '@/components/SidebarNav';
 // Lazy load ClientDetail
 const ClientDetail = lazy(() => 
   import('@/components/ClientDetail').then(module => ({ default: module.ClientDetail }))
@@ -68,15 +70,6 @@ function App() {
   const { session } = useAuth();
   const location = useLocation(); // Get location for AnimatePresence key
 
-  const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error("Error logging out:", error);
-      // Optionally show an error message to the user
-    }
-    // AuthProvider listener will automatically update the session state
-  };
-
   // If loading session, show loading indicator (optional but good UX)
   // const { loading } = useAuth(); // Can get loading state if needed
   // if (loading) return <div>Loading...</div>;
@@ -84,43 +77,20 @@ function App() {
   return (
     <div className="flex flex-col min-h-screen">
       {session ? (
-        // Wrap logged-in view with TooltipProvider
-        <TooltipProvider delayDuration={100}> 
-          <>
-            <header className="sticky top-0 z-10 flex justify-between items-center p-3 md:p-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-              {/* Removed the PsychDraw title span */}
-              {/* Placeholder for potential future logo/branding if needed */}
-              <div className="w-1/3"></div> 
-              
-              {/* Removed Centered Navigation Icons */}
-              <div className="flex-grow"></div> {/* Keep a flex-grow div for centering if needed later, or remove */} 
+        // Changed structure: Flex container for Sidebar + Main Content
+        <div className="flex h-screen">
+          {/* Sidebar (Desktop Only) */}
+          <SidebarNav />
 
-              {/* Logout Button pushed to the right */}
-              <div className="w-1/3 flex justify-end">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button 
-                      onClick={handleLogout}
-                      variant="ghost" 
-                      size="icon" // Use icon size
-                      className='h-8 w-8 md:h-9 md:w-9' // Slightly adjust size for touch/desktop
-                    >
-                      <LogOut className="h-4 w-4 md:h-5 md:w-5" /> {/* Icon */}
-                      <span className="sr-only">Logout</span> {/* Screen reader text */}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Logout</p>
-                  </TooltipContent>
-                </Tooltip>
-              </div>
-            </header>
-            {/* Add specific bottom padding for mobile to account for BottomNav */}
-            <main className="flex-grow p-4 pb-20 md:p-6 md:pb-6">
+          {/* Main Content Area (takes remaining space, handles scrolling) */}
+          <div className="flex-grow flex flex-col">
+            {/* Main scrollable content with padding */}
+            {/* Added ml-0 md:ml-60 for sidebar offset */}
+            <main className="flex-grow overflow-y-auto p-4 pb-20 md:p-6 md:pb-6 md:ml-60">
               {/* AnimatePresence manages exit/enter animations */}
               <AnimatePresence mode="wait">
                 <Suspense fallback={<RouteLoadingFallback />}>
-                  {/* Pass location and key to Routes for AnimatePresence */}
+                  {/* Routes remain inside the scrollable main area */}
                   <Routes location={location} key={location.pathname}>
                     <Route 
                       path="/" 
@@ -190,17 +160,18 @@ function App() {
                         >
                           <SettingsPage />
                         </motion.div>
-                      }
+                      } 
                     />
                     <Route path="*" element={<Navigate to="/" replace />} /> 
                   </Routes>
                 </Suspense>
               </AnimatePresence>
             </main>
-            {/* Render BottomNav here */}
+
+            {/* Bottom Nav (Mobile Only) */}
             <BottomNav /> 
-          </>
-        </TooltipProvider>
+          </div>
+        </div>
       ) : (
         // Logged-out view: Only the Login Form, centered
         <div className="flex justify-center items-center flex-grow p-4">
