@@ -1,0 +1,136 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  --radius: 0.625rem;
+  --background: hsl(0 0% 100%);
+  --foreground: hsl(0 0% 14.5%);
+  --card: hsl(0 0% 100%);
+  --card-foreground: hsl(0 0% 14.5%);
+  --popover: hsl(0 0% 100%);
+  --popover-foreground: hsl(0 0% 14.5%);
+  --primary: hsl(0 0% 20.5%);
+  --primary-foreground: hsl(0 0% 98.5%);
+  --secondary: hsl(0 0% 97%);
+  --secondary-foreground: hsl(0 0% 20.5%);
+  --muted: hsl(0 0% 97%);
+  --muted-foreground: hsl(0 0% 55.6%);
+  --accent: hsl(0 0% 97%);
+  --accent-foreground: hsl(0 0% 20.5%);
+  --destructive: hsl(27.3 90% 57.7%);
+  --destructive-foreground: hsl(0 0% 98.5%);
+  --border: hsl(0 0% 92.2%);
+  --input: hsl(0 0% 92.2%);
+  --ring: hsl(0 0% 70.8%);
+  --chart-1: hsl(41.1 90% 64.6%);
+  --chart-2: hsl(184.7 70% 60%);
+  --chart-3: hsl(227.4 50% 39.8%);
+  --chart-4: hsl(84.4 80% 82.8%);
+  --chart-5: hsl(70.1 75% 76.9%);
+  --sidebar: hsl(0 0% 98.5%);
+  --sidebar-foreground: hsl(0 0% 14.5%);
+  --sidebar-primary: hsl(0 0% 20.5%);
+  --sidebar-primary-foreground: hsl(0 0% 98.5%);
+  --sidebar-accent: hsl(0 0% 97%);
+  --sidebar-accent-foreground: hsl(0 0% 20.5%);
+  --sidebar-border: hsl(0 0% 92.2%);
+  --sidebar-ring: hsl(0 0% 70.8%);
+}
+
+.dark {
+  --background: hsl(0 0% 14.5%);
+  --foreground: hsl(0 0% 98.5%);
+  --card: hsl(0 0% 20.5%);
+  --card-foreground: hsl(0 0% 98.5%);
+  --popover: hsl(0 0% 20.5%);
+  --popover-foreground: hsl(0 0% 98.5%);
+  --primary: hsl(0 0% 92.2%);
+  --primary-foreground: hsl(0 0% 20.5%);
+  --secondary: hsl(0 0% 26.9%);
+  --secondary-foreground: hsl(0 0% 98.5%);
+  --muted: hsl(0 0% 26.9%);
+  --muted-foreground: hsl(0 0% 70.8%);
+  --accent: hsl(0 0% 26.9%);
+  --accent-foreground: hsl(0 0% 98.5%);
+  --destructive: hsl(22.2 85% 70.4%);
+  --destructive-foreground: hsl(0 0% 20.5%);
+  --border: hsla(0 0% 100% / 0.1);
+  --input: hsla(0 0% 100% / 0.15);
+  --ring: hsl(0 0% 55.6%);
+  --chart-1: hsl(264.4 90% 48.8%);
+  --chart-2: hsl(162.5 75% 69.6%);
+  --chart-3: hsl(70.1 75% 76.9%);
+  --chart-4: hsl(303.9 90% 62.7%);
+  --chart-5: hsl(16.4 90% 64.5%);
+  --sidebar: hsl(0 0% 20.5%);
+  --sidebar-foreground: hsl(0 0% 98.5%);
+  --sidebar-primary: hsl(264.4 90% 48.8%);
+  --sidebar-primary-foreground: hsl(0 0% 98.5%);
+  --sidebar-accent: hsl(0 0% 26.9%);
+  --sidebar-accent-foreground: hsl(0 0% 98.5%);
+  --sidebar-border: hsla(0 0% 100% / 0.1);
+  --sidebar-ring: hsl(0 0% 55.6%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* Custom styles added by AI */
+
+/* Hide spinner buttons for number inputs */
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type=number] {
+  -moz-appearance: textfield;
+}

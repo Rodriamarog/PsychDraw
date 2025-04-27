@@ -1,0 +1,221 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { corsHeaders } from '../_shared/cors.ts';
+// Gemini API Call Logic
+async function callGeminiForAnalysis(imageDataBase64, drawingTypeName) {
+  console.log(`Starting Gemini analysis using REST API for type: ${drawingTypeName}`);
+  const apiKey = Deno.env.get('GEMINI_API_KEY');
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY environment variable not set.");
+  }
+  // Use the model identifier from the documentation
+  const model = "gemini-2.0-flash";
+  const apiEndpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  // --- Re-using the same detailed prompt ---
+  const prompt = `
+You are an AI assistant specialized in psychological drawing analysis, aiding a qualified psychologist.
+Analyze the provided image based on established principles for the specific drawing test type: "${drawingTypeName}".
+
+Provide a detailed analysis structured strictly as a JSON object with the following schema:
+
+{
+  "drawing_type": "string",
+  "summary": "string",
+  "key_observations": ["string"],
+  "interpretive_indicators": ["string"],
+  "emotional_tone": "string",
+  "relational_aspects": "string | null",
+  "developmental_considerations": "string | null",
+  "potential_strengths": ["string"],
+  "potential_conflicts": ["string"],
+  "ai_disclaimer": "This analysis is AI-generated based on common interpretive principles and patterns. It is not a clinical diagnosis and requires interpretation by a qualified psychologist considering the full client context."
+}
+
+IMPORTANT INSTRUCTIONS:
+- Adhere strictly to the JSON schema provided.
+- Base interpretations on widely accepted psychological principles for the "${drawingTypeName}" test.
+- Use cautious, non-definitive language.
+- DO NOT provide a clinical diagnosis.
+- Ensure the "ai_disclaimer" field is included exactly as written.
+- If the image is unsuitable, state this clearly in the 'summary'.
+`;
+  // --- Construct Request Body ---
+  const requestBody = {
+    contents: [
+      {
+        parts: [
+          {
+            text: prompt
+          },
+          {
+            inlineData: {
+              mimeType: "image/jpeg",
+              data: imageDataBase64
+            }
+          }
+        ]
+      }
+    ]
+  };
+  // --- Make API Call ---
+  console.log(`Sending request to Gemini API endpoint: ${apiEndpoint}`);
+  try {
+    const response = await fetch(apiEndpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(requestBody)
+    });
+    if (!response.ok) {
+      const errorBody = await response.text();
+      console.error("Gemini API Error Response:", errorBody);
+      throw new Error(`Gemini API request failed: ${response.status} ${response.statusText}`);
+    }
+    const responseData = await response.json();
+    // --- Extract Text and Validate ---
+    // Get the raw text potentially including markdown fences
+    const rawAnalysisText = responseData.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!rawAnalysisText) {
+      console.error("Unexpected Gemini API response structure:", responseData);
+      throw new Error("Failed to extract analysis text from Gemini response.");
+    }
+    console.log("Raw Gemini response text received:", rawAnalysisText.substring(0, 100) + "..."); // Log start of raw response
+    // --- Clean the response: Extract content between first { and last } ---
+    let cleanedJsonString = rawAnalysisText;
+    const jsonStartIndex = cleanedJsonString.indexOf('{');
+    const jsonEndIndex = cleanedJsonString.lastIndexOf('}');
+    if (jsonStartIndex !== -1 && jsonEndIndex !== -1 && jsonEndIndex > jsonStartIndex) {
+      // Extract the substring that looks like a JSON object
+      cleanedJsonString = cleanedJsonString.substring(jsonStartIndex, jsonEndIndex + 1).trim();
+      console.log("Attempting to parse cleaned JSON string:", cleanedJsonString.substring(0, 100) + "..."); // Log start of cleaned string
+    } else {
+      // If we can't find valid braces, the response format is unexpected
+      console.error("Could not find JSON object boundaries in Gemini response:", rawAnalysisText);
+      throw new Error("Gemini response did not contain expected JSON object structure.");
+    }
+    // Basic validation: Check if the cleaned string is valid JSON
+    try {
+      JSON.parse(cleanedJsonString); // Try parsing the cleaned string
+      console.log("Gemini analysis received and cleaned successfully.");
+      return cleanedJsonString; // Return the cleaned JSON string
+    } catch (jsonError) {
+      console.error("Cleaned Gemini response was still not valid JSON:", jsonError);
+      console.error("Cleaned string content:", cleanedJsonString); // Log the problematic string
+      throw new Error("Received invalid JSON format from Gemini even after cleaning.");
+    }
+  } catch (error) {
+    console.error("Error calling Gemini API:", error);
+    // Re-throw the error to be caught by the main handler in Deno.serve
+    throw new Error(`Failed to get analysis from Gemini: ${error.message}`);
+  }
+} // This is the closing brace for the callGeminiForAnalysis function
+// Deno serve function
+Deno.serve(async (req)=>{
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', {
+      headers: corsHeaders
+    });
+  }
+  try {
+    // Ensure request is authorized (e.g., called by service role key from trigger function)
+    // For simplicity here, we assume calls are authorized if they reach the function.
+    // Add specific authorization checks if needed (e.g., verifying a secret header).
+    const { record } = await req.json(); // Supabase triggers send data in { record, old_record, type }
+    const analysisId = record?.id;
+    if (!analysisId) {
+      throw new Error("Missing analysis ID in request body.");
+    }
+    console.log(`Processing analysis ID: ${analysisId}`);
+    // Create Supabase client with service role key for backend operations
+    const supabaseAdmin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
+    // 1. Fetch analysis details including drawing path and type name
+    const { data: analysisData, error: fetchError } = await supabaseAdmin.from('drawing_analyses').select(`
+        id,
+        temp_drawing_path,
+        drawing_processed,
+        drawing_types!fk_drawing_type ( name )
+      `).eq('id', analysisId).single();
+    if (fetchError) throw fetchError;
+    if (!analysisData) throw new Error(`Analysis record not found: ${analysisId}`);
+    if (analysisData.drawing_processed) {
+      console.log(`Analysis ${analysisId} already processed. Skipping.`);
+      return new Response(JSON.stringify({
+        message: 'Already processed'
+      }), {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'application/json'
+        },
+        status: 200
+      });
+    }
+    if (!analysisData.temp_drawing_path) {
+      throw new Error(`Drawing path missing for analysis: ${analysisId}`);
+    }
+    const drawingPath = analysisData.temp_drawing_path;
+    const drawingTypeName = analysisData.drawing_types?.name ?? 'Unknown Type';
+    // 2. Download image from storage
+    console.log(`Downloading image from path: ${drawingPath}`);
+    const { data: blob, error: downloadError } = await supabaseAdmin.storage.from('temp-drawings') // Use correct bucket name
+    .download(drawingPath);
+    if (downloadError) throw downloadError;
+    if (!blob) throw new Error("Failed to download drawing blob.");
+    // Convert blob to base64 for Gemini API
+    const reader = new FileReader();
+    const dataPromise = new Promise((resolve, reject)=>{
+      reader.onloadend = ()=>resolve(reader.result.split(',')[1]); // Get base64 part
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+    const imageDataBase64 = await dataPromise;
+    // 3. Call Gemini API (using placeholder function)
+    const analysisResultJsonString = await callGeminiForAnalysis(imageDataBase64, drawingTypeName);
+    const analysisResult = JSON.parse(analysisResultJsonString); // Assuming Gemini returns JSON string
+    // 4. Update database record
+    console.log(`Updating analysis ${analysisId} with results and marking as processed.`);
+    const { error: updateError } = await supabaseAdmin.from('drawing_analyses').update({
+      raw_analysis: analysisResult,
+      drawing_processed: true,
+      // temp_drawing_path: null, // Optionally clear path now or rely on cleanup job
+      updated_at: new Date().toISOString()
+    }).eq('id', analysisId);
+    if (updateError) throw updateError;
+    // 5. Optionally: Trigger cleanup of temp_drawing_path immediately
+    // await supabaseAdmin.storage.from('temp-drawings').remove([drawingPath]);
+    // console.log(`Removed temporary drawing: ${drawingPath}`);
+    console.log(`Successfully processed analysis ${analysisId}`);
+    return new Response(JSON.stringify({
+      success: true,
+      analysisId: analysisId
+    }), {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      },
+      status: 200
+    });
+  } catch (error) {
+    console.error('Error processing drawing analysis:', error);
+    return new Response(JSON.stringify({
+      error: error.message
+    }), {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json'
+      },
+      status: 500
+    });
+  }
+});
+
+
+
+
+- I have to make a home page or user profile page or something
+- Make a prettier nav bar 
+- Deploy on cloudfare or somewhere with github actions 
+- Buy domain name 
+- Setup free trial
+- Setup billing 
+- Emails, app logo, google cloud app projet thing
