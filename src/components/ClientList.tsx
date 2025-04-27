@@ -366,8 +366,8 @@ export function ClientList() {
                             value={newClientIdentifier} 
                             onChange={(e) => setNewClientIdentifier(e.target.value)}
                             placeholder="AB123" // Simplified placeholder further
-                            disabled={isSaving}
-                        />
+                          disabled={isSaving}
+                      />
                   </div>
                     {/* Gender Row - Label centered above cards */}
                     <div className="grid gap-2"> {/* Simplified outer grid row, adjust gap if needed */} 

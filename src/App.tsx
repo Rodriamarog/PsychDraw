@@ -81,7 +81,7 @@ function App() {
         <div className="flex h-screen">
           {/* Sidebar (Desktop Only) */}
           <SidebarNav />
-
+              
           {/* Main Content Area (takes remaining space, handles scrolling) */}
           <div className="flex-grow flex flex-col">
             {/* Main scrollable content with padding */}

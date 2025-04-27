@@ -511,8 +511,9 @@ export function ClientDetail() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      {/* Header Section - Keep as flex-col, add gap */}
+      <div className="flex flex-col gap-4">
+        {/* Top Row: Back Button & Name/Details */}
         <div className="flex items-center gap-3">
             <Button asChild variant="ghost" size="icon" className="h-8 w-8">
                 <Link to="/"> 
@@ -541,8 +542,9 @@ export function ClientDetail() {
               )}
             </div>
         </div>
-        {/* Apply v0 responsive classes and justification */}
-        <div className="flex flex-col w-full gap-2 sm:flex-row sm:gap-3">
+        {/* Bottom Row (All Sizes): Action Buttons - Align right on medium+ */}
+        {/* Change sm:flex-row to md:flex-row, add self-alignment */}
+        <div className="flex flex-col w-full gap-2 md:flex-row md:gap-3 self-start md:self-end">
             {/* Edit Client Button - Add onClick handler */}
             <Button 
               variant="outline" 
