@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Home, Settings } from 'lucide-react';
 import { cn } from "@/lib/utils"; // For conditional classes

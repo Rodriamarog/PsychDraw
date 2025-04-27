@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/lib/supabaseClient';
@@ -15,7 +15,6 @@ import html2canvas from 'html2canvas';
 import { 
   Tooltip, 
   TooltipContent, 
-  TooltipProvider, // Might need provider at top level if not already there, but App.tsx has one
   TooltipTrigger 
 } from "@/components/ui/tooltip"; // Import Tooltip components
 import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
