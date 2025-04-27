@@ -1,16 +1,12 @@
-import React from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Home, Settings, LogOut, Sparkles } from 'lucide-react';
 import { cn } from "@/lib/utils"; // For conditional classes
 import { Button } from "@/components/ui/button";
-import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabaseClient';
 
 export function SidebarNav() {
   const location = useLocation();
-  const navigate = useNavigate();
   const pathname = location.pathname;
-  const { user } = useAuth(); // Get user info if needed later
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();

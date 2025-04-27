@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Camera, CameraOff, ArrowLeft, Check, RefreshCw, Image as ImageIcon, Loader2, RotateCw } from 'lucide-react';
+import { Camera, ArrowLeft, Check, RefreshCw, Image as ImageIcon, Loader2, RotateCw } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from '@/contexts/AuthContext';

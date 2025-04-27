@@ -2,8 +2,6 @@
 import { lazy, Suspense } from 'react'; // Import lazy and Suspense
 import { LoginForm } from "@/components/LoginForm"
 import { useAuth } from "@/contexts/AuthContext"
-import { Button } from "@/components/ui/button"
-// import { supabase } from "@/lib/supabaseClient"
 import { ClientList } from "@/components/ClientList"
 import { Routes, Route, Navigate, useLocation } from "react-router-dom"; // Import routing components and useLocation
 import { motion, AnimatePresence } from "framer-motion"; // Import framer-motion

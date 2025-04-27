@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { supabase } from '@/lib/supabaseClient';
-import { ArrowLeft, FilePlus2, FileText, Home, TreeDeciduous, User, Users, ChevronRight, XIcon, ClipboardList, Loader2, ChevronLeft, Mars, Venus, Transgender, CloudHail, Component, Info } from 'lucide-react'; // Icons
+import { ArrowLeft, FilePlus2, FileText, Home, TreeDeciduous, User, Users, ChevronRight, XIcon, ClipboardList, Loader2, ChevronLeft, Mars, Venus, Transgender, CloudHail, Component } from 'lucide-react'; // Icons
 import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
 import { Label } from "@/components/ui/label"; // Import Label
 import { Badge } from "@/components/ui/badge"; // Import Badge
@@ -140,9 +140,6 @@ export function ClientDetail() {
   
   // State for the new analysis form inside the dialog
   const [selectedDrawingTypeId, setSelectedDrawingTypeId] = useState<string>("");
-  const [analysisTitle, setAnalysisTitle] = useState(""); // Add state for title later
-  const [drawingImageFile, setDrawingImageFile] = useState<File | null>(null); // Add state for image later
-  const [isStartingAnalysis, setIsStartingAnalysis] = useState(false); // Loading state for submission
   const [startAnalysisError, setStartAnalysisError] = useState<string | null>(null); // Error state for submission
 
   // Calculate pagination variables
@@ -352,8 +349,6 @@ export function ClientDetail() {
     setIsAnalysisDialogOpen(false);
     // Reset form state if needed when modal closes
     setSelectedDrawingTypeId("");
-    setAnalysisTitle("");
-    setDrawingImageFile(null);
     setStartAnalysisError(null);
   }
 
@@ -380,15 +375,6 @@ export function ClientDetail() {
     requestAnimationFrame(() => {
         navigate(`/client/${clientId}/capture/${selectedDrawingTypeId}`);
     });
-
-    // Remove old logic:
-    // console.log("Starting analysis with type:", selectedDrawingTypeId);
-    // setIsStartingAnalysis(true);
-    // setStartAnalysisError(null);
-    // // Simulate API call
-    // await new Promise(resolve => setTimeout(resolve, 1500)); 
-    // setIsStartingAnalysis(false);
-    // handleModalClose(); 
   };
 
   // --- Edit Client Modal Open Handler --- 
@@ -660,9 +646,9 @@ export function ClientDetail() {
                               <Button 
                                   type="button"
                                   onClick={handleStartAnalysis} 
-                                  disabled={!selectedDrawingTypeId || isStartingAnalysis}
+                                  disabled={!selectedDrawingTypeId}
                               >
-                                  {isStartingAnalysis ? 'Starting...' : 'Start Analysis'}
+                                  {'Start Analysis'}
                               </Button>
                           </div>
                       </Card>
