@@ -6,13 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, User, XIcon, Mars, Venus, Transgender, Info } from 'lucide-react';
+import { Plus, User, XIcon, Mars, Venus, Transgender } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { Search } from 'lucide-react';
 import { Card } from "@/components/ui/card";
 import { motion, AnimatePresence } from 'framer-motion';
 import { Textarea } from "@/components/ui/textarea";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 // Define a type for the client data we expect
 // Include optional age and gender AND psychologist_id
