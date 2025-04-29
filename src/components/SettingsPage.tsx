@@ -6,7 +6,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, XIcon } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { motion, AnimatePresence } from "framer-motion";
+
+// Helper function to get initials
+function getInitials(name: string): string {
+  if (!name) return "?";
+  const names = name.trim().split(' ');
+  if (names.length === 1) return names[0]?.[0]?.toUpperCase() || "?";
+  return (names[0]?.[0] || '') + (names[names.length - 1]?.[0] || '').toUpperCase();
+}
 
 export function SettingsPage() {
   const { user } = useAuth(); // Get user from AuthContext
@@ -28,7 +37,11 @@ export function SettingsPage() {
   // Effect to load initial data
   useEffect(() => {
     if (user) {
-      const currentDisplayName = user.user_metadata?.display_name || '';
+      // Prioritize explicitly set display_name, fallback to Google's full_name
+      const currentDisplayName = 
+        user.user_metadata?.display_name || 
+        user.user_metadata?.full_name || 
+        '';
       setDisplayName(currentDisplayName);
       setInitialDisplayName(currentDisplayName);
     }
@@ -126,6 +139,10 @@ export function SettingsPage() {
   // Determine if changes have been made for profile info
   const hasChanges = displayName !== initialDisplayName;
 
+  // Determine display name for rendering, falling back to email if necessary
+  const nameForDisplay = displayName || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
+  const avatarUrl = user?.user_metadata?.avatar_url;
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <h1 className="text-3xl font-bold tracking-tight">Account Settings</h1>
@@ -136,27 +153,33 @@ export function SettingsPage() {
           <CardDescription>Manage your account details.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Profile Section (Avatar + Name Input) */}
+          <div className="flex items-center gap-4">
+            <Avatar className="h-16 w-16">
+              <AvatarImage src={avatarUrl} alt={nameForDisplay} />
+              <AvatarFallback>{getInitials(nameForDisplay)}</AvatarFallback>
+            </Avatar>
+            <div className="flex-grow space-y-2">
+              <Label htmlFor="displayName">Display Name</Label>
+              <Input
+                id="displayName"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="Your Name"
+                disabled={isLoading}
+              />
+              <p className="text-xs text-muted-foreground">
+                This name might be shown in reports or other parts of the application.
+              </p>
+            </div>
+          </div>
+
           {/* Email Display */}
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             {/* Display email - not editable */}
             <p id="email" className="text-sm text-muted-foreground p-2 border rounded-md bg-muted/50">
               {user?.email ?? 'Loading...'}
-            </p>
-          </div>
-
-          {/* Display Name Input */}
-          <div className="space-y-2">
-            <Label htmlFor="displayName">Display Name</Label>
-            <Input
-              id="displayName"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Your Name"
-              disabled={isLoading}
-            />
-            <p className="text-xs text-muted-foreground">
-              This name might be shown in reports or other parts of the application.
             </p>
           </div>
         </CardContent>
