@@ -20,6 +20,9 @@ function getInitials(name: string): string {
 export function SettingsPage() {
   const { user } = useAuth(); // Get user from AuthContext
 
+  // Add loading state based on user object availability
+  const [isUserDataLoading, setIsUserDataLoading] = useState(true);
+
   const [displayName, setDisplayName] = useState('');
   const [initialDisplayName, setInitialDisplayName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -34,17 +37,22 @@ export function SettingsPage() {
   // State for password modal
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
-  // Effect to load initial data
+  // Effect to load initial data AND manage loading state
   useEffect(() => {
     if (user) {
-      // Prioritize explicitly set display_name, fallback to Google's full_name
       const currentDisplayName = 
         user.user_metadata?.display_name || 
         user.user_metadata?.full_name || 
         '';
       setDisplayName(currentDisplayName);
       setInitialDisplayName(currentDisplayName);
+      setIsUserDataLoading(false); // User data is available
+    } else {
+      // If user becomes null after initial load (e.g., logout elsewhere), handle it
+      // Or, if context initializes with user=null initially when no session
+      setIsUserDataLoading(false); 
     }
+    // Consider if AuthContext provides its own loading state for better accuracy
   }, [user]); // Rerun when user object changes
 
   const handleUpdateProfile = async () => {
@@ -142,6 +150,22 @@ export function SettingsPage() {
   // Determine display name for rendering, falling back to email if necessary
   const nameForDisplay = displayName || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
   const avatarUrl = user?.user_metadata?.avatar_url;
+
+  // Add Loading check before returning main content
+  if (isUserDataLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+  
+  // If user is definitely null after loading (e.g. session lost)
+  if (!user) {
+     // Redirect to login or show an appropriate message
+     // For now, just showing a message:
+     return <div className="text-center p-10">User session not found. Please log in.</div>; 
+  }
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
